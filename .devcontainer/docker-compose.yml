@@ -1,0 +1,37 @@
+version: "3"
+services:
+  go:
+    build:
+      context: ../
+      dockerfile: .devcontainer/infra/go/Dockerfile
+    env_file:
+      - .env
+    tty: true
+    ports:
+      - ${GO_PORT}:${GO_PORT}
+      - ${GO_DEBUG_PORT}:${GO_DEBUG_PORT}
+    volumes:
+      - ../:/data
+      - ~/.gitconfig:/root/.gitconfig
+    security_opt: # delve用に必要
+      - apparmor:unconfined
+    cap_add: # delve用に必要
+      - SYS_PTRACE
+
+  mysql:
+    image: mysql:8.0
+    ports:
+      - ${DB_PORT}:3306
+    command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - ../.devcontainer/infra/mysql/:/docker-entrypoint-initdb.d/
+      - db-data:/var/lib/mysql
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
+
+volumes:
+  db-data:
+    driver: local
