@@ -61,6 +61,33 @@ type GmailAuthUseCase interface {
 	CreateGmailService(ctx context.Context, config domain.GmailAuthConfig) (interface{}, error)
 }
 
+// GmailMessageService はGmailメッセージ取得サービスのインターフェースです
+type GmailMessageService interface {
+	// GetMessages はメッセージ一覧を取得します
+	GetMessages(ctx context.Context, credential domain.GmailCredential, applicationName string, maxResults int64) ([]domain.GmailMessage, error)
+
+	// GetMessage は指定されたIDのメッセージを取得します
+	GetMessage(ctx context.Context, credential domain.GmailCredential, applicationName string, messageID string) (*domain.GmailMessage, error)
+
+	// GetLabels はラベル一覧を取得します
+	GetLabels(ctx context.Context, credential domain.GmailCredential, applicationName string) ([]domain.GmailInfo, error)
+
+	// GetMessagesByLabel は指定されたラベルのメッセージ一覧を取得します
+	GetMessagesByLabel(ctx context.Context, credential domain.GmailCredential, applicationName string, labelID string, maxResults int64) ([]domain.GmailMessage, error)
+}
+
+// GmailMessageUseCase はGmailメッセージ取得機能のユースケースインターフェースです
+type GmailMessageUseCase interface {
+	// GetMessages はメッセージ一覧を取得します
+	GetMessages(ctx context.Context, config domain.GmailAuthConfig, maxResults int64) ([]domain.GmailMessage, error)
+
+	// GetMessage は指定されたIDのメッセージを取得します
+	GetMessage(ctx context.Context, config domain.GmailAuthConfig, messageID string) (*domain.GmailMessage, error)
+
+	// GetMessagesByLabelPath は指定されたラベルパスのメッセージ一覧を取得します
+	GetMessagesByLabelPath(ctx context.Context, config domain.GmailAuthConfig, labelPath string, maxResults int64) ([]domain.GmailMessage, error)
+}
+
 // AuthUseCase は認証機能のユースケースインターフェースです
 type AuthUseCase interface {
 	// GetGoogleAuthURL はGoogle認証URLを取得します

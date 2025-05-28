@@ -82,3 +82,20 @@ func (c *GmailCredential) IsExpired() bool {
 func (c *GmailCredential) IsValid() bool {
 	return c.AccessToken != "" && !c.IsExpired()
 }
+
+// GmailMessage はGmailメッセージのドメインモデルです
+type GmailMessage struct {
+	ID      string    `json:"id"`
+	Subject string    `json:"subject"`
+	From    string    `json:"from"`
+	To      []string  `json:"to"`
+	Date    time.Time `json:"date"`
+	Body    string    `json:"body"`
+}
+
+// GmailInfo はGmailラベル情報のドメインモデルです
+type GmailInfo struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Type string `json:"type"`
+}
