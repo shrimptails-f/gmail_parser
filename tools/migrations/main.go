@@ -68,6 +68,8 @@ func CheckArgs() error {
 func CreateArrayMigrationSlice() []interface{} {
 	return []interface{}{
 		model.Email{},
+		model.EmailProject{},
+		model.EmailCandidate{},
 		model.KeywordGroup{},
 		model.KeyWord{},
 		model.EmailKeywordGroup{},

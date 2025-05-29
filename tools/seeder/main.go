@@ -77,12 +77,20 @@ func Seed(tx *gorm.DB) error {
 		return err
 	}
 
-	// 2. メールデータ
+	// 2. メールデータ（共通ヘッダー）
 	if err = seeders.CreateEmail(tx); err != nil {
 		return err
 	}
 
-	// 3. 関連テーブル
+	// 3. メール種別専用データ
+	if err = seeders.CreateEmailProject(tx); err != nil {
+		return err
+	}
+	if err = seeders.CreateEmailCandidate(tx); err != nil {
+		return err
+	}
+
+	// 4. 関連テーブル
 	if err = seeders.CreateEmailKeywordGroup(tx); err != nil {
 		return err
 	}
