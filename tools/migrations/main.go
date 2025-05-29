@@ -76,6 +76,7 @@ func CreateArrayMigrationSlice() []interface{} {
 		model.Email{},
 		model.EmailProject{},
 		model.EmailCandidate{},
+		model.EntryTiming{},
 		model.EmailKeywordGroup{},
 		model.EmailPositionGroup{},
 		model.EmailWorkTypeGroup{},

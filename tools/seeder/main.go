@@ -89,9 +89,16 @@ func Seed(tx *gorm.DB) error {
 	}
 
 	// 3. メール種別専用データ
-	if err = seeders.CreateEmailProject(tx); err != nil {
-		return err
-	}
+	// CreateEmailProjectは現在使用しません（createEmail.goでEmailProjectをネストして作成するため）
+	// if err = seeders.CreateEmailProject(tx); err != nil {
+	// 	return err
+	// }
+
+	// EntryTimingは現在createEmail.goでEmailProjectのリレーションとして作成されます
+	// if err = seeders.CreateEntryTiming(tx); err != nil {
+	// 	return err
+	// }
+
 	if err = seeders.CreateEmailCandidate(tx); err != nil {
 		return err
 	}

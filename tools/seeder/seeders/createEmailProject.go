@@ -18,7 +18,7 @@ func CreateEmailProject(tx *gorm.DB) error {
 		{
 			EmailID:         "email001",
 			ProjectTitle:    stringPtr("ECサイト構築プロジェクト"),
-			EntryTimings:    stringPtr("2024年2月〜"),
+			EntryTiming:     stringPtr("2024年2月〜"),
 			EndTiming:       stringPtr("2024年8月"),
 			WorkLocation:    stringPtr("東京都渋谷区（リモート可）"),
 			PriceFrom:       intPtr(600000),
@@ -29,7 +29,7 @@ func CreateEmailProject(tx *gorm.DB) error {
 		{
 			EmailID:         "email003",
 			ProjectTitle:    stringPtr("AIチャットボット開発"),
-			EntryTimings:    stringPtr("2024年3月〜"),
+			EntryTiming:     stringPtr("2024年3月〜"),
 			EndTiming:       stringPtr("2024年12月"),
 			WorkLocation:    stringPtr("東京都港区"),
 			PriceFrom:       intPtr(800000),
@@ -40,7 +40,7 @@ func CreateEmailProject(tx *gorm.DB) error {
 		{
 			EmailID:         "email004",
 			ProjectTitle:    stringPtr("マイクロサービス基盤構築"),
-			EntryTimings:    stringPtr("2024年4月〜"),
+			EntryTiming:     stringPtr("2024年4月〜"),
 			EndTiming:       stringPtr("2024年10月"),
 			WorkLocation:    stringPtr("東京都千代田区"),
 			PriceFrom:       intPtr(750000),
