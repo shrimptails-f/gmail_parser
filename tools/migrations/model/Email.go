@@ -17,12 +17,10 @@ type Email struct {
 	CreatedAt time.Time // 作成日時
 	UpdatedAt time.Time // 更新日時
 
-	// リレーション
-	KeywordGroups []KeywordGroup `gorm:"many2many:email_keyword_groups;"` // 技術キーワード（多対多）
-	Positions     []Position     `gorm:"many2many:email_positions;"`      // ポジション（多対多）
-	WorkTypes     []WorkType     `gorm:"many2many:email_work_types;"`     // 業務内容（多対多）
-
 	// 子テーブル
-	EmailProject   *EmailProject   `gorm:"foreignKey:EmailID;references:ID"` // 案件情報（1対1）
-	EmailCandidate *EmailCandidate `gorm:"foreignKey:EmailID;references:ID"` // 人材情報（1対1）
+	EmailProject        *EmailProject        `gorm:"foreignKey:EmailID;references:ID"` // 案件情報（1対1）
+	EmailCandidate      *EmailCandidate      `gorm:"foreignKey:EmailID;references:ID"` // 人材情報（1対1）
+	EmailKeywordGroups  []EmailKeywordGroup  `gorm:"foreignKey:EmailID;references:ID"` // 技術キーワード（1対多）
+	EmailPositionGroups []EmailPositionGroup `gorm:"foreignKey:EmailID;references:ID"` // ポジション（1対多）
+	EmailWorkTypeGroups []EmailWorkTypeGroup `gorm:"foreignKey:EmailID;references:ID"` // 業務内容（1対多）
 }

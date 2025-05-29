@@ -67,15 +67,17 @@ func CheckArgs() error {
 // CreateArrayMigrationSlice はマイグレーション用の構造体が入った配列を返す。
 func CreateArrayMigrationSlice() []interface{} {
 	return []interface{}{
+		model.KeywordGroup{},
+		model.KeyWord{},
+		model.PositionGroup{},
+		model.PositionWord{},
+		model.WorkTypeGroup{},
+		model.WorkTypeWord{},
 		model.Email{},
 		model.EmailProject{},
 		model.EmailCandidate{},
-		model.KeywordGroup{},
-		model.KeyWord{},
 		model.EmailKeywordGroup{},
-		model.Position{},
-		model.EmailPosition{},
-		model.WorkType{},
-		model.EmailWorkType{},
+		model.EmailPositionGroup{},
+		model.EmailWorkTypeGroup{},
 	}
 }

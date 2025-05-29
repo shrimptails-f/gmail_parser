@@ -70,10 +70,16 @@ func Seed(tx *gorm.DB) error {
 	if err = seeders.CreateKeyWord(tx); err != nil {
 		return err
 	}
-	if err = seeders.CreatePosition(tx); err != nil {
+	if err = seeders.CreatePositionGroup(tx); err != nil {
 		return err
 	}
-	if err = seeders.CreateWorkType(tx); err != nil {
+	if err = seeders.CreatePositionWord(tx); err != nil {
+		return err
+	}
+	if err = seeders.CreateWorkTypeGroup(tx); err != nil {
+		return err
+	}
+	if err = seeders.CreateWorkTypeWord(tx); err != nil {
 		return err
 	}
 
@@ -94,10 +100,10 @@ func Seed(tx *gorm.DB) error {
 	if err = seeders.CreateEmailKeywordGroup(tx); err != nil {
 		return err
 	}
-	if err = seeders.CreateEmailPosition(tx); err != nil {
+	if err = seeders.CreateEmailPositionGroup(tx); err != nil {
 		return err
 	}
-	if err = seeders.CreateEmailWorkType(tx); err != nil {
+	if err = seeders.CreateEmailWorkTypeGroup(tx); err != nil {
 		return err
 	}
 
