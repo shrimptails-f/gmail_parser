@@ -20,6 +20,9 @@ cert
 client_secret.json
 /gmail_auth
 
+# プロンプト
+prompts/text_analysis_prompt.txt
+
 # カバレッジ率
 coverage.out
 coverage.html

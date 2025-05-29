@@ -6,6 +6,9 @@ import (
 	"business/internal/auth/application"
 	"business/internal/auth/domain"
 	"business/internal/auth/infrastructure"
+	httpinfra "business/internal/http/infrastructure"
+	aiapp "business/internal/openai/application"
+	aiinfra "business/internal/openai/infrastructure"
 	"business/tools/logger"
 	"context"
 	"fmt"
@@ -188,33 +191,6 @@ func testGmailMessages(ctx context.Context, l *logger.Logger) error {
 	fmt.Printf("Gmailメッセージ取得テスト成功!\n")
 	fmt.Printf("取得したメッセージ数: %d\n\n", len(messages))
 
-	for i, message := range messages {
-		fmt.Printf("=== メッセージ %d ===\n", i+1)
-		fmt.Printf("ID: %s\n", message.ID)
-		fmt.Printf("件名: %s\n", message.Subject)
-		fmt.Printf("送信者: %s\n", message.From)
-		fmt.Printf("宛先: %v\n", message.To)
-		fmt.Printf("日時: %s\n", message.Date.Format("2006-01-02 15:04:05"))
-		fmt.Printf("本文: %s\n", truncateString(message.Body, 100))
-		fmt.Println()
-	}
-
-	// 最初のメッセージの詳細を取得してテスト
-	if len(messages) > 0 {
-		fmt.Printf("=== 最初のメッセージの詳細 ===\n")
-		message, err := gmailMessageUseCase.GetMessage(ctx, *config, messages[0].ID)
-		if err != nil {
-			return fmt.Errorf("メッセージ詳細の取得に失敗しました: %w", err)
-		}
-
-		fmt.Printf("ID: %s\n", message.ID)
-		fmt.Printf("件名: %s\n", message.Subject)
-		fmt.Printf("送信者: %s\n", message.From)
-		fmt.Printf("宛先: %v\n", message.To)
-		fmt.Printf("日時: %s\n", message.Date.Format("2006-01-02 15:04:05"))
-		fmt.Printf("本文: %s\n", message.Body)
-	}
-
 	return nil
 }
 
@@ -295,14 +271,11 @@ func testGmailMessagesByLabel(ctx context.Context, l *logger.Logger, labelPath s
 	fmt.Printf("指定ラベル: %s\n", labelPath)
 	fmt.Printf("取得したメッセージ数: %d\n\n", len(messages))
 
-	for i, message := range messages {
-		fmt.Printf("=== メッセージ %d ===\n", i+1)
-		fmt.Printf("ID: %s\n", message.ID)
-		fmt.Printf("件名: %s\n", message.Subject)
-		fmt.Printf("送信者: %s\n", message.From)
-		fmt.Printf("宛先: %v\n", message.To)
-		fmt.Printf("日時: %s\n", message.Date.Format("2006-01-02 15:04:05"))
-		fmt.Printf("本文: %s\n", message.Body)
+	for _, message := range messages {
+		// メール分析を実行
+		if err := analyzeEmailMessage(ctx, &message); err != nil {
+			l.Error(fmt.Errorf("メール分析に失敗しました: %w", err))
+		}
 		fmt.Println()
 	}
 
@@ -345,6 +318,23 @@ func getClientSecretPath() string {
 	}
 
 	return ""
+}
+
+// analyzeEmailMessage はメールメッセージを分析します
+func analyzeEmailMessage(ctx context.Context, message *domain.GmailMessage) error {
+	// サービスを作成
+	promptService := aiinfra.NewFilePromptService("prompts")
+	emailAnalysisService := httpinfra.NewEmailAnalysisService(promptService)
+	emailAnalysisUseCase := aiapp.NewEmailAnalysisUseCase(emailAnalysisService)
+
+	// メール分析を実行
+	result, err := emailAnalysisUseCase.AnalyzeEmailContent(ctx, message)
+	if err != nil {
+		return fmt.Errorf("メール分析エラー: %w", err)
+	}
+
+	// 結果を表示
+	return emailAnalysisUseCase.DisplayEmailAnalysisResult(result)
 }
 
 func printUsage() {
