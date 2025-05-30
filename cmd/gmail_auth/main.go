@@ -6,10 +6,13 @@ import (
 	"business/internal/auth/application"
 	"business/internal/auth/domain"
 	"business/internal/auth/infrastructure"
+	emailstoredi "business/internal/emailstore/di"
 	httpinfra "business/internal/http/infrastructure"
 	aiapp "business/internal/openai/application"
+	openaidomain "business/internal/openai/domain"
 	aiinfra "business/internal/openai/infrastructure"
 	"business/tools/logger"
+	"business/tools/mysql"
 	"context"
 	"fmt"
 	"os"
@@ -261,7 +264,8 @@ func testGmailMessagesByLabel(ctx context.Context, l *logger.Logger, labelPath s
 	gmailMessageUseCase := application.NewGmailMessageUseCase(gmailAuthService, gmailMessageService)
 
 	// ラベル指定でメッセージ一覧を取得（最大5件）
-	messages, err := gmailMessageUseCase.GetMessagesByLabelPath(ctx, *config, labelPath, 5)
+	// TODO: ここは一旦1件にしておく。
+	messages, err := gmailMessageUseCase.GetMessagesByLabelPath(ctx, *config, labelPath, 1)
 	if err != nil {
 		return fmt.Errorf("ラベル指定メッセージ一覧の取得に失敗しました: %w", err)
 	}
@@ -334,7 +338,36 @@ func analyzeEmailMessage(ctx context.Context, message *domain.GmailMessage) erro
 	}
 
 	// 結果を表示
-	return emailAnalysisUseCase.DisplayEmailAnalysisResult(result)
+	if err := emailAnalysisUseCase.DisplayEmailAnalysisResult(result); err != nil {
+		return fmt.Errorf("分析結果表示エラー: %w", err)
+	}
+
+	// DB保存処理を実行
+	if err := saveEmailAnalysisResult(ctx, result); err != nil {
+		return fmt.Errorf("DB保存エラー: %w", err)
+	}
+
+	return nil
+}
+
+// saveEmailAnalysisResult はメール分析結果をDBに保存します
+func saveEmailAnalysisResult(ctx context.Context, result *openaidomain.EmailAnalysisResult) error {
+	// MySQL接続を作成
+	mysqlConn, err := mysql.New()
+	if err != nil {
+		return fmt.Errorf("MySQL接続エラー: %w", err)
+	}
+
+	// EmailStoreUseCaseを作成
+	emailStoreUseCase := emailstoredi.ProvideEmailStoreDependencies(mysqlConn.DB)
+
+	// メール分析結果を保存
+	if err := emailStoreUseCase.SaveEmailAnalysisResult(ctx, result); err != nil {
+		return fmt.Errorf("メール保存エラー: %w", err)
+	}
+
+	fmt.Printf("メール分析結果をDBに保存しました: %s\n", result.ID)
+	return nil
 }
 
 func printUsage() {

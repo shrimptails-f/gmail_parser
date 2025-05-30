@@ -49,13 +49,15 @@ func (r *EmailStoreRepositoryImpl) SaveEmail(ctx context.Context, result *openai
 	}()
 
 	// Emailテーブルに保存
+	body := result.Body
 	email := &domain.Email{
-		ID:        result.ID,
-		Subject:   result.Subject,
-		From:      result.From,
-		FromEmail: result.FromEmail,
-		Date:      result.Date,
-		Body:      result.Body,
+		ID:           result.ID,
+		Subject:      result.Subject,
+		SenderName:   result.From,
+		SenderEmail:  result.FromEmail,
+		ReceivedDate: result.Date,
+		Body:         &body,
+		Category:     "案件", // デフォルトで案件として設定
 	}
 
 	if err := tx.Create(email).Error; err != nil {
@@ -82,19 +84,26 @@ func (r *EmailStoreRepositoryImpl) SaveEmail(ctx context.Context, result *openai
 // saveProjectDetails は案件メールの詳細情報を保存します
 func (r *EmailStoreRepositoryImpl) saveProjectDetails(tx *gorm.DB, result *openaidomain.EmailAnalysisResult) error {
 	// EmailProjectを保存
+	workLocation := result.WorkLocation
+	endTiming := result.EndPeriod
+	remoteType := result.RemoteWorkCategory
+	languages := strings.Join(result.Languages, ",")
+	frameworks := strings.Join(result.Frameworks, ",")
+	mustSkills := strings.Join(result.RequiredSkillsMust, ",")
+	wantSkills := strings.Join(result.RequiredSkillsWant, ",")
+
 	emailProject := &domain.EmailProject{
-		EmailID:             result.ID,
-		MailCategory:        result.MailCategory,
-		EndPeriod:           result.EndPeriod,
-		WorkLocation:        result.WorkLocation,
-		PriceFrom:           result.PriceFrom,
-		PriceTo:             result.PriceTo,
-		RemoteWorkCategory:  result.RemoteWorkCategory,
-		RemoteWorkFrequency: result.RemoteWorkFrequency,
-		// 一覧画面用のカンマ区切り文字列を作成
-		TechnologiesText: r.createTechnologiesText(result),
-		PositionsText:    "", // 今回は空文字列
-		WorkTypesText:    "", // 今回は空文字列
+		EmailID:         result.ID,
+		WorkLocation:    &workLocation,
+		EndTiming:       &endTiming,
+		PriceFrom:       result.PriceFrom,
+		PriceTo:         result.PriceTo,
+		RemoteType:      &remoteType,
+		RemoteFrequency: result.RemoteWorkFrequency,
+		Languages:       &languages,
+		Frameworks:      &frameworks,
+		MustSkills:      &mustSkills,
+		WantSkills:      &wantSkills,
 	}
 
 	if err := tx.Create(emailProject).Error; err != nil {
@@ -102,7 +111,7 @@ func (r *EmailStoreRepositoryImpl) saveProjectDetails(tx *gorm.DB, result *opena
 	}
 
 	// EntryTimingを保存
-	if err := r.saveEntryTimings(tx, emailProject.ID, result.StartPeriod); err != nil {
+	if err := r.saveEntryTimings(tx, emailProject.EmailID, result.StartPeriod); err != nil {
 		return fmt.Errorf("EntryTiming保存エラー: %w", err)
 	}
 
@@ -125,11 +134,11 @@ func (r *EmailStoreRepositoryImpl) createTechnologiesText(result *openaidomain.E
 }
 
 // saveEntryTimings は入場時期を保存します
-func (r *EmailStoreRepositoryImpl) saveEntryTimings(tx *gorm.DB, emailProjectID uint, startPeriods []string) error {
+func (r *EmailStoreRepositoryImpl) saveEntryTimings(tx *gorm.DB, emailProjectID string, startPeriods []string) error {
 	for _, period := range startPeriods {
 		entryTiming := &domain.EntryTiming{
 			EmailProjectID: emailProjectID,
-			Timing:         period,
+			StartDate:      period,
 		}
 		if err := tx.Create(entryTiming).Error; err != nil {
 			return fmt.Errorf("EntryTiming保存エラー: %w", err)
@@ -141,22 +150,22 @@ func (r *EmailStoreRepositoryImpl) saveEntryTimings(tx *gorm.DB, emailProjectID 
 // saveKeywords はキーワード関連のデータを保存します
 func (r *EmailStoreRepositoryImpl) saveKeywords(tx *gorm.DB, result *openaidomain.EmailAnalysisResult) error {
 	// 言語
-	if err := r.saveKeywordsByType(tx, result.ID, result.Languages, "language"); err != nil {
+	if err := r.saveKeywordsByType(tx, result.ID, result.Languages, "LANGUAGE"); err != nil {
 		return err
 	}
 
 	// フレームワーク
-	if err := r.saveKeywordsByType(tx, result.ID, result.Frameworks, "framework"); err != nil {
+	if err := r.saveKeywordsByType(tx, result.ID, result.Frameworks, "FRAMEWORK"); err != nil {
 		return err
 	}
 
 	// 必須スキル
-	if err := r.saveKeywordsByType(tx, result.ID, result.RequiredSkillsMust, "skill_must"); err != nil {
+	if err := r.saveKeywordsByType(tx, result.ID, result.RequiredSkillsMust, "MUST"); err != nil {
 		return err
 	}
 
 	// 希望スキル
-	if err := r.saveKeywordsByType(tx, result.ID, result.RequiredSkillsWant, "skill_want"); err != nil {
+	if err := r.saveKeywordsByType(tx, result.ID, result.RequiredSkillsWant, "WANT"); err != nil {
 		return err
 	}
 
@@ -179,7 +188,7 @@ func (r *EmailStoreRepositoryImpl) saveKeywordsByType(tx *gorm.DB, emailID strin
 		// EmailKeywordGroupを作成
 		emailKeywordGroup := &domain.EmailKeywordGroup{
 			EmailID:        emailID,
-			KeywordGroupID: keywordGroup.ID,
+			KeywordGroupID: keywordGroup.KeywordGroupID,
 			Type:           keywordType,
 		}
 
@@ -207,6 +216,7 @@ func (r *EmailStoreRepositoryImpl) getOrCreateKeywordGroup(tx *gorm.DB, name str
 	// 新規作成
 	keywordGroup = domain.KeywordGroup{
 		Name: name,
+		Type: "other", // デフォルトでotherに設定
 	}
 
 	if err := tx.Create(&keywordGroup).Error; err != nil {

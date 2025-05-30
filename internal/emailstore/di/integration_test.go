@@ -21,19 +21,20 @@ func TestEmailStoreIntegration_SaveEmailAnalysisResult(t *testing.T) {
 	require.NoError(t, err)
 	defer cleanup()
 
-	// テーブル作成
+	// マイグレーションファイルと同じ順序でテーブル作成
 	err = db.DB.AutoMigrate(
-		&domain.Email{},
-		&domain.EmailProject{},
-		&domain.EntryTiming{},
 		&domain.KeywordGroup{},
 		&domain.KeyWord{},
-		&domain.EmailKeywordGroup{},
 		&domain.PositionGroup{},
 		&domain.PositionWord{},
-		&domain.EmailPositionGroup{},
 		&domain.WorkTypeGroup{},
 		&domain.WorkTypeWord{},
+		&domain.Email{},
+		&domain.EmailProject{},
+		&domain.EmailCandidate{},
+		&domain.EntryTiming{},
+		&domain.EmailKeywordGroup{},
+		&domain.EmailPositionGroup{},
 		&domain.EmailWorkTypeGroup{},
 	)
 	require.NoError(t, err)
@@ -82,25 +83,20 @@ func TestEmailStoreIntegration_SaveEmailAnalysisResult(t *testing.T) {
 				var savedProject domain.EmailProject
 				result = db.DB.Where("email_id = ?", "integration-test-email-1").First(&savedProject)
 				assert.NoError(t, result.Error)
-				assert.Equal(t, "案件", savedProject.MailCategory)
-				assert.Equal(t, "東京都渋谷区", savedProject.WorkLocation)
+				assert.Equal(t, "東京都渋谷区", *savedProject.WorkLocation)
 				assert.Equal(t, 600000, *savedProject.PriceFrom)
 				assert.Equal(t, 800000, *savedProject.PriceTo)
-				assert.Equal(t, "ハイブリッド", savedProject.RemoteWorkCategory)
-				assert.Equal(t, "週3日", *savedProject.RemoteWorkFrequency)
-
-				// TechnologiesTextの確認
-				expectedTech := "Go,TypeScript,Gin,React,Git,Docker,AWS,Kubernetes,Terraform"
-				assert.Equal(t, expectedTech, savedProject.TechnologiesText)
+				assert.Equal(t, "ハイブリッド", *savedProject.RemoteType)
+				assert.Equal(t, "週3日", *savedProject.RemoteFrequency)
 
 				// EntryTimingテーブルの確認
 				var entryTimings []domain.EntryTiming
-				result = db.DB.Where("email_project_id = ?", savedProject.ID).Find(&entryTimings)
+				result = db.DB.Where("email_project_id = ?", savedProject.EmailID).Find(&entryTimings)
 				assert.NoError(t, result.Error)
 				assert.Len(t, entryTimings, 2)
 				timings := make([]string, len(entryTimings))
 				for i, timing := range entryTimings {
-					timings[i] = timing.Timing
+					timings[i] = timing.StartDate
 				}
 				assert.Contains(t, timings, "2024年6月")
 				assert.Contains(t, timings, "2024年7月")
@@ -122,10 +118,10 @@ func TestEmailStoreIntegration_SaveEmailAnalysisResult(t *testing.T) {
 				for _, ekg := range emailKeywordGroups {
 					typeCount[ekg.Type]++
 				}
-				assert.Equal(t, 2, typeCount["language"])   // Go, TypeScript
-				assert.Equal(t, 2, typeCount["framework"])  // Gin, React
-				assert.Equal(t, 3, typeCount["skill_must"]) // Git, Docker, AWS
-				assert.Equal(t, 2, typeCount["skill_want"]) // Kubernetes, Terraform
+				assert.Equal(t, 2, typeCount["LANGUAGE"])  // Go, TypeScript
+				assert.Equal(t, 2, typeCount["FRAMEWORK"]) // Gin, React
+				assert.Equal(t, 3, typeCount["MUST"])      // Git, Docker, AWS
+				assert.Equal(t, 2, typeCount["WANT"])      // Kubernetes, Terraform
 			},
 		},
 		{
