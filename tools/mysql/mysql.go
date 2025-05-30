@@ -178,6 +178,7 @@ func Transactional(db *gorm.DB) (*gorm.DB, func()) {
 	return tx, func() {
 		// panicによるエラーの場合
 		if r := recover(); r != nil {
+			fmt.Printf("panic recovered: %v\n", r) // ← 追加
 			fmt.Printf("予期せぬエラーが発生したため、トランザクションを巻き戻しました。\n")
 			tx.Rollback()
 		}
