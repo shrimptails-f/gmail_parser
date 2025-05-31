@@ -114,6 +114,25 @@ type CategoryResponse struct {
 	Path       string  `json:"path"`
 }
 
+// EmailProjectResponse は営業案件メール用のレスポンス構造体です
+type EmailProjectResponse struct {
+	EmailType       string   `json:"メール区分"`
+	ProjectName     string   `json:"案件名"`
+	Tasks           []string `json:"業務"`
+	StartDates      []string `json:"入場時期・開始時期"`
+	EndDate         string   `json:"終了時期"`
+	WorkLocation    string   `json:"勤務場所"`
+	SalaryFrom      int      `json:"単価FROM"`
+	SalaryTo        int      `json:"単価TO"`
+	Languages       []string `json:"言語"`
+	Frameworks      []string `json:"フレームワーク"`
+	Positions       []string `json:"ポジション"`
+	RequiredSkills  []string `json:"求めるスキル MUST"`
+	PreferredSkills []string `json:"求めるスキル WANT"`
+	RemoteWorkType  string   `json:"リモートワーク区分"`
+	RemoteFrequency string   `json:"リモートワークの頻度"`
+}
+
 // AnalyzeText はテキストをOpenAI APIで解析します
 func (s *OpenAIService) AnalyzeText(ctx context.Context, request *domain.TextAnalysisRequest) (*domain.TextAnalysisResult, error) {
 	// リクエストの妥当性チェック
@@ -152,8 +171,198 @@ func (s *OpenAIService) AnalyzeText(ctx context.Context, request *domain.TextAna
 	return result, nil
 }
 
+// parseResponseMultiple はOpenAIのレスポンスを複数の解析結果に変換します
+func (s *OpenAIService) parseResponseMultiple(responseBody string) ([]*domain.TextAnalysisResult, error) {
+	// まず営業案件メール用の配列として解析を試行
+	var emailProjectArray []EmailProjectResponse
+	if err := json.Unmarshal([]byte(responseBody), &emailProjectArray); err != nil {
+		// 営業案件メール用の配列でない場合は、通常の解析レスポンス配列として試行
+		var analysisResponseArray []AnalysisResponse
+		if err := json.Unmarshal([]byte(responseBody), &analysisResponseArray); err != nil {
+			// 配列でない場合は単一オブジェクトとして解析
+			var singleResponse AnalysisResponse
+			if err := json.Unmarshal([]byte(responseBody), &singleResponse); err != nil {
+				return nil, fmt.Errorf("解析結果JSONデコードエラー: %w", err)
+			}
+			// 単一オブジェクトを配列に変換
+			analysisResponseArray = []AnalysisResponse{singleResponse}
+		}
+
+		// 通常の解析レスポンスをドメインモデルに変換
+		return s.convertAnalysisResponsesToResults(analysisResponseArray, responseBody), nil
+	}
+
+	// 営業案件メール用のレスポンスをドメインモデルに変換
+	return s.convertEmailProjectsToResults(emailProjectArray, responseBody), nil
+}
+
+// convertAnalysisResponsesToResults は通常の解析レスポンスをドメインモデルに変換します
+func (s *OpenAIService) convertAnalysisResponsesToResults(analysisResponseArray []AnalysisResponse, responseBody string) []*domain.TextAnalysisResult {
+	var results []*domain.TextAnalysisResult
+	for _, analysisResponse := range analysisResponseArray {
+		result := &domain.TextAnalysisResult{
+			AnalyzedAt: time.Now(),
+			Sentiment: domain.SentimentAnalysis{
+				Score:      analysisResponse.Sentiment.Score,
+				Magnitude:  analysisResponse.Sentiment.Magnitude,
+				Label:      analysisResponse.Sentiment.Label,
+				Confidence: analysisResponse.Sentiment.Confidence,
+			},
+			Summary:    analysisResponse.Summary,
+			Language:   analysisResponse.Language,
+			Confidence: analysisResponse.Confidence,
+			RawResponse: map[string]interface{}{
+				"openai_response": responseBody,
+			},
+		}
+
+		// キーワードを変換
+		for _, kw := range analysisResponse.Keywords {
+			result.Keywords = append(result.Keywords, domain.Keyword{
+				Text:      kw.Text,
+				Relevance: kw.Relevance,
+				Count:     kw.Count,
+				Category:  kw.Category,
+			})
+		}
+
+		// エンティティを変換
+		for _, entity := range analysisResponse.Entities {
+			result.Entities = append(result.Entities, domain.Entity{
+				Name:       entity.Name,
+				Type:       entity.Type,
+				Salience:   entity.Salience,
+				Confidence: entity.Confidence,
+			})
+		}
+
+		// カテゴリを変換
+		for _, cat := range analysisResponse.Categories {
+			result.Categories = append(result.Categories, domain.Category{
+				Name:       cat.Name,
+				Confidence: cat.Confidence,
+				Path:       cat.Path,
+			})
+		}
+
+		results = append(results, result)
+	}
+	return results
+}
+
+// convertEmailProjectsToResults は営業案件メール用のレスポンスをドメインモデルに変換します
+func (s *OpenAIService) convertEmailProjectsToResults(emailProjects []EmailProjectResponse, responseBody string) []*domain.TextAnalysisResult {
+	var results []*domain.TextAnalysisResult
+	for _, project := range emailProjects {
+		result := &domain.TextAnalysisResult{
+			AnalyzedAt: time.Now(),
+			Summary:    project.ProjectName,
+			Language:   "ja",
+			Confidence: 0.9, // 営業案件メールの場合は固定値
+			RawResponse: map[string]interface{}{
+				"openai_response": responseBody,
+				"email_project":   project,
+			},
+		}
+
+		// 営業案件メール特有の情報をキーワードとして追加
+		if project.ProjectName != "" {
+			result.Keywords = append(result.Keywords, domain.Keyword{
+				Text:      project.ProjectName,
+				Relevance: 1.0,
+				Count:     1,
+				Category:  "案件名",
+			})
+		}
+
+		// 言語・フレームワークをキーワードとして追加
+		for _, lang := range project.Languages {
+			if lang != "" {
+				result.Keywords = append(result.Keywords, domain.Keyword{
+					Text:      lang,
+					Relevance: 0.8,
+					Count:     1,
+					Category:  "言語",
+				})
+			}
+		}
+
+		for _, fw := range project.Frameworks {
+			if fw != "" {
+				result.Keywords = append(result.Keywords, domain.Keyword{
+					Text:      fw,
+					Relevance: 0.8,
+					Count:     1,
+					Category:  "フレームワーク",
+				})
+			}
+		}
+
+		// ポジションをエンティティとして追加
+		for _, pos := range project.Positions {
+			if pos != "" {
+				result.Entities = append(result.Entities, domain.Entity{
+					Name:       pos,
+					Type:       "POSITION",
+					Salience:   0.7,
+					Confidence: 0.9,
+				})
+			}
+		}
+
+		results = append(results, result)
+	}
+	return results
+}
+
+// AnalyzeTextMultiple はテキストをOpenAI APIで解析し、複数の結果を返します
+func (s *OpenAIService) AnalyzeTextMultiple(ctx context.Context, request *domain.TextAnalysisRequest) ([]*domain.TextAnalysisResult, error) {
+	// リクエストの妥当性チェック
+	if err := request.IsValid(); err != nil {
+		return nil, err
+	}
+
+	// プロンプトを構築
+	prompt := s.buildPrompt(request)
+
+	// OpenAI APIリクエストを作成
+	openaiRequest := OpenAIRequest{
+		Model: OpenAIModel,
+		Messages: []Message{
+			{
+				Role:    "user",
+				Content: prompt,
+			},
+		},
+		MaxTokens:   MaxTokens,
+		Temperature: Temperature,
+	}
+
+	// APIリクエストを送信
+	responseBody, err := s.sendRequest(ctx, openaiRequest)
+	if err != nil {
+		return nil, fmt.Errorf("OpenAI APIリクエストエラー: %w", err)
+	}
+
+	// レスポンスを解析（複数案件対応）
+	results, err := s.parseResponseMultiple(responseBody)
+	if err != nil {
+		return nil, fmt.Errorf("レスポンス解析エラー: %w", err)
+	}
+
+	return results, nil
+}
+
 // buildPrompt はリクエストからOpenAI用のプロンプトを構築します
+// 複数案件対応のため、プロンプトファイルの内容をそのまま使用します
 func (s *OpenAIService) buildPrompt(request *domain.TextAnalysisRequest) string {
+	// メタデータからソースがemailの場合は、リクエストテキストをそのまま返す
+	// （プロンプトファイルの内容は既にユースケース層で結合済み）
+	if source, exists := request.Metadata["source"]; exists && source == "email" {
+		return request.Text
+	}
+
+	// 通常のテキスト解析の場合は従来通りのプロンプトを構築
 	var promptBuilder strings.Builder
 
 	promptBuilder.WriteString("以下のテキストを字句解析して、JSON形式で結果を返してください。\n\n")

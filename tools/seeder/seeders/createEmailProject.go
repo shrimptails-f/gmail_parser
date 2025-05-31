@@ -16,7 +16,7 @@ func CreateEmailProject(tx *gorm.DB) error {
 
 	emailProjects := []model.EmailProject{
 		{
-			EmailID:         "email001",
+			EmailID:         1,
 			ProjectTitle:    stringPtr("ECサイト構築プロジェクト"),
 			EntryTiming:     stringPtr("2024年2月〜"),
 			EndTiming:       stringPtr("2024年8月"),
@@ -27,7 +27,7 @@ func CreateEmailProject(tx *gorm.DB) error {
 			RemoteFrequency: stringPtr("週5日"),
 		},
 		{
-			EmailID:         "email003",
+			EmailID:         3,
 			ProjectTitle:    stringPtr("AIチャットボット開発"),
 			EntryTiming:     stringPtr("2024年3月〜"),
 			EndTiming:       stringPtr("2024年12月"),
@@ -38,7 +38,7 @@ func CreateEmailProject(tx *gorm.DB) error {
 			RemoteFrequency: stringPtr("週5日出社"),
 		},
 		{
-			EmailID:         "email004",
+			EmailID:         4,
 			ProjectTitle:    stringPtr("マイクロサービス基盤構築"),
 			EntryTiming:     stringPtr("2024年4月〜"),
 			EndTiming:       stringPtr("2024年10月"),

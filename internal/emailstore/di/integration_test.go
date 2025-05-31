@@ -4,6 +4,7 @@ package di
 import (
 	"business/internal/emailstore/domain"
 	openaidomain "business/internal/openai/domain"
+	"business/tools/migrations/model"
 	"business/tools/mysql"
 	"context"
 	"testing"
@@ -21,19 +22,19 @@ func TestEmailStoreIntegration_SaveEmailAnalysisResult(t *testing.T) {
 
 	// マイグレーションファイルと同じ順序でテーブル作成
 	err = db.DB.AutoMigrate(
-		&domain.KeywordGroup{},
-		&domain.KeyWord{},
-		&domain.PositionGroup{},
-		&domain.PositionWord{},
-		&domain.WorkTypeGroup{},
-		&domain.WorkTypeWord{},
-		&domain.Email{},
-		&domain.EmailProject{},
-		&domain.EmailCandidate{},
-		&domain.EntryTiming{},
-		&domain.EmailKeywordGroup{},
-		&domain.EmailPositionGroup{},
-		&domain.EmailWorkTypeGroup{},
+		&model.KeywordGroup{},
+		&model.KeyWord{},
+		&model.PositionGroup{},
+		&model.PositionWord{},
+		&model.WorkTypeGroup{},
+		&model.WorkTypeWord{},
+		&model.Email{},
+		&model.EmailProject{},
+		&model.EmailCandidate{},
+		&model.EntryTiming{},
+		&model.EmailKeywordGroup{},
+		&model.EmailPositionGroup{},
+		&model.EmailWorkTypeGroup{},
 	)
 	require.NoError(t, err)
 
@@ -50,7 +51,7 @@ func TestEmailStoreIntegration_SaveEmailAnalysisResult(t *testing.T) {
 		{
 			name: "統合テスト_案件メール保存成功",
 			input: &openaidomain.EmailAnalysisResult{
-				ID:                  "integration-test-email-1",
+				GmailID:             "integration-test-email-1",
 				Subject:             "【案件】Go言語エンジニア募集",
 				From:                "recruiter@example.com",
 				FromEmail:           "recruiter@example.com",
@@ -73,13 +74,13 @@ func TestEmailStoreIntegration_SaveEmailAnalysisResult(t *testing.T) {
 			verify: func(t *testing.T) {
 				// Emailテーブルの確認
 				var savedEmail domain.Email
-				result := db.DB.Where("id = ?", "integration-test-email-1").First(&savedEmail)
+				result := db.DB.Where("gmail_id = ?", "integration-test-email-1").First(&savedEmail)
 				assert.NoError(t, result.Error)
 				assert.Equal(t, "【案件】Go言語エンジニア募集", savedEmail.Subject)
 
 				// EmailProjectテーブルの確認
 				var savedProject domain.EmailProject
-				result = db.DB.Where("email_id = ?", "integration-test-email-1").First(&savedProject)
+				result = db.DB.Where("email_id = ?", savedEmail.ID).First(&savedProject)
 				assert.NoError(t, result.Error)
 				assert.Equal(t, "東京都渋谷区", *savedProject.WorkLocation)
 				assert.Equal(t, 600000, *savedProject.PriceFrom)
@@ -107,7 +108,7 @@ func TestEmailStoreIntegration_SaveEmailAnalysisResult(t *testing.T) {
 
 				// EmailKeywordGroupの確認
 				var emailKeywordGroups []domain.EmailKeywordGroup
-				result = db.DB.Where("email_id = ?", "integration-test-email-1").Find(&emailKeywordGroups)
+				result = db.DB.Where("email_id = ?", savedEmail.ID).Find(&emailKeywordGroups)
 				assert.NoError(t, result.Error)
 				assert.Len(t, emailKeywordGroups, 9) // 9個のキーワード関連付け
 
@@ -125,7 +126,7 @@ func TestEmailStoreIntegration_SaveEmailAnalysisResult(t *testing.T) {
 		{
 			name: "統合テスト_営業メール保存成功",
 			input: &openaidomain.EmailAnalysisResult{
-				ID:           "integration-test-email-2",
+				GmailID:      "integration-test-email-2",
 				Subject:      "営業のご案内",
 				From:         "sales@example.com",
 				FromEmail:    "sales@example.com",
@@ -137,13 +138,13 @@ func TestEmailStoreIntegration_SaveEmailAnalysisResult(t *testing.T) {
 			verify: func(t *testing.T) {
 				// Emailテーブルの確認
 				var savedEmail domain.Email
-				result := db.DB.Where("id = ?", "integration-test-email-2").First(&savedEmail)
+				result := db.DB.Where("gmail_id = ?", "integration-test-email-2").First(&savedEmail)
 				assert.NoError(t, result.Error)
 				assert.Equal(t, "営業のご案内", savedEmail.Subject)
 
 				// EmailProjectテーブルには保存されないことを確認
 				var projectCount int64
-				result = db.DB.Model(&domain.EmailProject{}).Where("email_id = ?", "integration-test-email-2").Count(&projectCount)
+				result = db.DB.Model(&domain.EmailProject{}).Where("email_id = ?", savedEmail.ID).Count(&projectCount)
 				assert.NoError(t, result.Error)
 				assert.Equal(t, int64(0), projectCount)
 			},
@@ -152,20 +153,6 @@ func TestEmailStoreIntegration_SaveEmailAnalysisResult(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// テストデータのクリーンアップ
-			db.DB.Exec("DELETE FROM email_work_type_groups")
-			db.DB.Exec("DELETE FROM email_position_groups")
-			db.DB.Exec("DELETE FROM email_keyword_groups")
-			db.DB.Exec("DELETE FROM entry_timings")
-			db.DB.Exec("DELETE FROM email_projects")
-			db.DB.Exec("DELETE FROM emails")
-			db.DB.Exec("DELETE FROM work_type_words")
-			db.DB.Exec("DELETE FROM work_type_groups")
-			db.DB.Exec("DELETE FROM position_words")
-			db.DB.Exec("DELETE FROM position_groups")
-			db.DB.Exec("DELETE FROM key_words")
-			db.DB.Exec("DELETE FROM keyword_groups")
-
 			// Act
 			err := emailStoreUseCase.SaveEmailAnalysisResult(ctx, tt.input)
 

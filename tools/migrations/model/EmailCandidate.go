@@ -6,11 +6,12 @@ import (
 
 // EmailCandidate（人材提案メール専用情報）
 type EmailCandidate struct {
-	EmailID          string    `gorm:"primaryKey;size:32"` // メールID
-	CandidateName    *string   `gorm:"size:255"`           // 人材名（仮）
-	ExperienceYears  *int      `gorm:"type:int"`           // 経験年数
-	SkillsSummary    *string   `gorm:"type:text"`          // 自己紹介・スキルまとめ
-	AvailabilityDate *string   `gorm:"size:255"`           // 参画可能日
+	ID               uint      `gorm:"primaryKey;autoIncrement"` // オートインクリメントID
+	EmailID          uint      `gorm:"index"`                    // メールID（emails.idと同じ）
+	CandidateName    *string   `gorm:"size:255"`                 // 人材名（仮）
+	ExperienceYears  *int      `gorm:"type:int"`                 // 経験年数
+	SkillsSummary    *string   `gorm:"type:text"`                // 自己紹介・スキルまとめ
+	AvailabilityDate *string   `gorm:"size:255"`                 // 参画可能日
 	CreatedAt        time.Time // 作成日時
 	UpdatedAt        time.Time // 更新日時
 

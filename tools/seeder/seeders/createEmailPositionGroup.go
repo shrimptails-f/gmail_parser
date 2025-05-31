@@ -13,51 +13,51 @@ func CreateEmailPositionGroup(tx *gorm.DB) error {
 	emailPositionGroups := []model.EmailPositionGroup{
 		// email001 (Java案件) の関連
 		{
-			EmailID:         "email001",
+			EmailID:         1,
 			PositionGroupID: 3, // SE
 		},
 		{
-			EmailID:         "email001",
+			EmailID:         1,
 			PositionGroupID: 2, // PL
 		},
 		// email002 (React案件) の関連
 		{
-			EmailID:         "email002",
+			EmailID:         2,
 			PositionGroupID: 6, // フロントエンドエンジニア
 		},
 		{
-			EmailID:         "email002",
+			EmailID:         2,
 			PositionGroupID: 3, // SE
 		},
 		// email003 (Python機械学習案件) の関連
 		{
-			EmailID:         "email003",
+			EmailID:         3,
 			PositionGroupID: 10, // 機械学習エンジニア
 		},
 		{
-			EmailID:         "email003",
+			EmailID:         3,
 			PositionGroupID: 9, // データエンジニア
 		},
 		// email004 (Go案件) の関連
 		{
-			EmailID:         "email004",
+			EmailID:         4,
 			PositionGroupID: 7, // バックエンドエンジニア
 		},
 		{
-			EmailID:         "email004",
+			EmailID:         4,
 			PositionGroupID: 5, // アーキテクト
 		},
 		// email005 (フルスタック案件) の関連
 		{
-			EmailID:         "email005",
+			EmailID:         5,
 			PositionGroupID: 8, // フルスタックエンジニア
 		},
 		{
-			EmailID:         "email005",
+			EmailID:         5,
 			PositionGroupID: 6, // フロントエンドエンジニア
 		},
 		{
-			EmailID:         "email005",
+			EmailID:         5,
 			PositionGroupID: 7, // バックエンドエンジニア
 		},
 	}

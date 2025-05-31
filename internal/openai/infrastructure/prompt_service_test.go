@@ -10,6 +10,7 @@ import (
 )
 
 func TestFilePromptService_LoadPrompt_正常系_プロンプトファイルを読み込むこと(t *testing.T) {
+	t.Parallel()
 	// Arrange
 	tempDir := t.TempDir()
 	service := NewFilePromptService(tempDir)
@@ -29,6 +30,7 @@ func TestFilePromptService_LoadPrompt_正常系_プロンプトファイルを�
 }
 
 func TestFilePromptService_LoadPrompt_異常系_存在しないファイルでエラーを返すこと(t *testing.T) {
+	t.Parallel()
 	// Arrange
 	tempDir := t.TempDir()
 	service := NewFilePromptService(tempDir)
@@ -43,6 +45,7 @@ func TestFilePromptService_LoadPrompt_異常系_存在しないファイルで�
 }
 
 func TestFilePromptService_LoadPrompt_異常系_空のファイル名でエラーを返すこと(t *testing.T) {
+	t.Parallel()
 	// Arrange
 	tempDir := t.TempDir()
 	service := NewFilePromptService(tempDir)
@@ -57,6 +60,7 @@ func TestFilePromptService_LoadPrompt_異常系_空のファイル名でエラ�
 }
 
 func TestFilePromptService_LoadPrompt_異常系_ディレクトリトラバーサル攻撃を防ぐこと(t *testing.T) {
+	t.Parallel()
 	// Arrange
 	tempDir := t.TempDir()
 	service := NewFilePromptService(tempDir)
@@ -71,6 +75,7 @@ func TestFilePromptService_LoadPrompt_異常系_ディレクトリトラバー�
 }
 
 func TestFilePromptService_LoadPrompt_正常系_UTF8エンコードのファイルを読み込むこと(t *testing.T) {
+	t.Parallel()
 	// Arrange
 	tempDir := t.TempDir()
 	service := NewFilePromptService(tempDir)
@@ -92,6 +97,7 @@ func TestFilePromptService_LoadPrompt_正常系_UTF8エンコードのファイ�
 }
 
 func TestFilePromptService_LoadPrompt_正常系_大きなファイルを読み込むこと(t *testing.T) {
+	t.Parallel()
 	// Arrange
 	tempDir := t.TempDir()
 	service := NewFilePromptService(tempDir)

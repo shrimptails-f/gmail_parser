@@ -36,13 +36,33 @@ func (u *EmailStoreUseCaseImpl) SaveEmailAnalysisResult(ctx context.Context, res
 	return nil
 }
 
-// CheckEmailExists はメールIDの存在チェックを行います
-func (u *EmailStoreUseCaseImpl) CheckEmailExists(ctx context.Context, emailID string) (bool, error) {
-	if emailID == "" {
+// SaveEmailAnalysisMultipleResult は複数案件対応のメール分析結果を保存します
+func (u *EmailStoreUseCaseImpl) SaveEmailAnalysisMultipleResult(ctx context.Context, result *openaidomain.EmailAnalysisMultipleResult) error {
+	// 入力値チェック
+	if result == nil {
+		return fmt.Errorf("分析結果がnilです")
+	}
+
+	// 結果の妥当性チェック
+	if err := result.IsValid(); err != nil {
+		return fmt.Errorf("分析結果妥当性チェックエラー: %w", err)
+	}
+
+	// リポジトリを使用してメールを保存
+	if err := u.emailStoreRepository.SaveEmailMultiple(ctx, result); err != nil {
+		return fmt.Errorf("複数案件メール保存エラー: %w", err)
+	}
+
+	return nil
+}
+
+// CheckGmailIdExists はメールIDの存在チェックを行います
+func (u *EmailStoreUseCaseImpl) CheckGmailIdExists(ctx context.Context, emailId string) (bool, error) {
+	if emailId == "" {
 		return false, fmt.Errorf("メールIDが空です")
 	}
 
-	exists, err := u.emailStoreRepository.EmailExists(ctx, emailID)
+	exists, err := u.emailStoreRepository.EmailExists(ctx, emailId)
 	if err != nil {
 		return false, fmt.Errorf("メール存在チェックエラー: %w", err)
 	}

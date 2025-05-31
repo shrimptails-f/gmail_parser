@@ -6,8 +6,9 @@ import (
 
 // EmailProject（案件メール専用情報）
 type EmailProject struct {
-	EmailID      string  `gorm:"primaryKey;size:32"` // メールID（emails.idと同じ）
-	ProjectTitle *string `gorm:"size:255"`           // 案件名
+	ID           uint    `gorm:"primaryKey;autoIncrement"` // オートインクリメントID
+	EmailID      uint    `gorm:"index"`                    // メールID（emails.idと同じ）
+	ProjectTitle *string `gorm:"size:255"`                 // 案件名
 
 	// 表示用（カンマ区切り）
 	EntryTiming *string `gorm:"type:text"` // 入場時期（"2025/06/01,2025/07/01"）

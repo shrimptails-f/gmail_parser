@@ -9,7 +9,8 @@ import (
 
 // Email は全メール共通の基本情報を表すドメインモデルです
 type Email struct {
-	ID           string    `gorm:"primaryKey;size:32" json:"id"`       // メールID
+	ID           uint      `gorm:"primaryKey;autoIncrement"`           // オートインクリメントID
+	GmailID      string    `gorm:"size:32;index"`                      // GメールID
 	Subject      string    `gorm:"type:text;not null" json:"subject"`  // 件名
 	SenderName   string    `gorm:"size:255" json:"sender_name"`        // 差出人名
 	SenderEmail  string    `gorm:"size:255;index" json:"sender_email"` // メールアドレス
@@ -29,8 +30,9 @@ type Email struct {
 
 // EmailProject は案件メール専用の詳細情報を表すドメインモデルです
 type EmailProject struct {
-	EmailID      string  `gorm:"primaryKey;size:32" json:"email_id"` // メールID（emails.idと同じ）
-	ProjectTitle *string `gorm:"size:255" json:"project_title"`      // 案件名
+	ID           uint    `gorm:"primaryKey;autoIncrement"`      // オートインクリメントID
+	EmailID      uint    `gorm:"index"`                         // メールID（emails.idと同じ）
+	ProjectTitle *string `gorm:"size:255" json:"project_title"` // 案件名
 
 	// 表示用（カンマ区切り）
 	EntryTiming *string `gorm:"type:text" json:"entry_timing"` // 入場時期（"2025/06/01,2025/07/01"）
@@ -58,9 +60,10 @@ type EmailProject struct {
 
 // EmailCandidate は人材メール専用の詳細情報を表すドメインモデルです（将来拡張用）
 type EmailCandidate struct {
-	EmailID   string    `gorm:"primaryKey;size:32" json:"email_id"` // メールID
-	CreatedAt time.Time `json:"created_at"`                         // 作成日時
-	UpdatedAt time.Time `json:"updated_at"`                         // 更新日時
+	ID        uint      `gorm:"primaryKey;autoIncrement"` // オートインクリメントID
+	EmailID   uint      `gorm:"index"`                    // メールID（emails.idと同じ）
+	CreatedAt time.Time `json:"created_at"`               // 作成日時
+	UpdatedAt time.Time `json:"updated_at"`               // 更新日時
 
 	// リレーション
 	Email Email `gorm:"foreignKey:EmailID;references:ID" json:"email"`
@@ -69,7 +72,7 @@ type EmailCandidate struct {
 // EntryTiming は案件の入場時期を正規化管理するドメインモデルです
 type EntryTiming struct {
 	ID             uint      `gorm:"primaryKey" json:"id"`                  // ID
-	EmailProjectID string    `gorm:"size:32;index" json:"email_project_id"` // 紐づく案件メールID
+	EmailProjectID uint      `gorm:"size:32;index" json:"email_project_id"` // 紐づく案件メールID
 	StartDate      string    `gorm:"size:20;not null" json:"start_date"`    // 入場日（例: "2025/06/01"）
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
@@ -97,7 +100,7 @@ type KeyWord struct {
 
 // EmailKeywordGroup はEmailとKeywordGroupの多対多中間テーブルを表すドメインモデルです
 type EmailKeywordGroup struct {
-	EmailID        string    `gorm:"primaryKey;size:32" json:"email_id"`                                           // メールID
+	EmailID        uint      `gorm:"primaryKey;size:32" json:"email_id"`                                           // メールID
 	KeywordGroupID uint      `gorm:"primaryKey" json:"keyword_group_id"`                                           // キーワードグループID
 	Type           string    `gorm:"primaryKey;type:enum('MUST','WANT','LANGUAGE','FRAMEWORK');index" json:"type"` // スキル種別
 	CreatedAt      time.Time `json:"created_at"`                                                                   // 登録日時
@@ -128,8 +131,8 @@ type PositionWord struct {
 
 // EmailPositionGroup はEmailとPositionGroupの多対多中間テーブルを表すドメインモデルです
 type EmailPositionGroup struct {
-	EmailID         string `gorm:"primaryKey;size:32" json:"email_id"`  // メールID
-	PositionGroupID uint   `gorm:"primaryKey" json:"position_group_id"` // ポジショングループID
+	EmailID         uint `gorm:"primaryKey;size:32" json:"email_id"`  // メールID
+	PositionGroupID uint `gorm:"primaryKey" json:"position_group_id"` // ポジショングループID
 
 	// リレーション
 	Email Email `gorm:"foreignKey:EmailID;references:ID" json:"email"`
@@ -157,8 +160,8 @@ type WorkTypeWord struct {
 
 // EmailWorkTypeGroup はEmailとWorkTypeGroupの多対多中間テーブルを表すドメインモデルです
 type EmailWorkTypeGroup struct {
-	EmailID         string `gorm:"primaryKey;size:32" json:"email_id"`   // メールID
-	WorkTypeGroupID uint   `gorm:"primaryKey" json:"work_type_group_id"` // 業務グループID
+	EmailID         uint `gorm:"primaryKey;size:32" json:"email_id"`   // メールID
+	WorkTypeGroupID uint `gorm:"primaryKey" json:"work_type_group_id"` // 業務グループID
 
 	// リレーション
 	Email Email `gorm:"foreignKey:EmailID;references:ID" json:"email"`

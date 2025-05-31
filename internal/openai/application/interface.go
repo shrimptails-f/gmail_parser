@@ -18,10 +18,12 @@ type EmailAnalysisUseCase interface {
 type TextAnalysisUseCase interface {
 	AnalyzeText(ctx context.Context, text string) (*domain.TextAnalysisResult, error)
 	AnalyzeTextWithOptions(ctx context.Context, request *domain.TextAnalysisRequest) (*domain.TextAnalysisResult, error)
+	AnalyzeEmailTextMultiple(ctx context.Context, emailText, messageID, subject string) ([]*domain.TextAnalysisResult, error)
 	DisplayAnalysisResult(result *domain.TextAnalysisResult) error
 }
 
 // TextAnalysisService はテキスト字句解析サービスのインターフェースです
 type TextAnalysisService interface {
 	AnalyzeText(ctx context.Context, request *domain.TextAnalysisRequest) (*domain.TextAnalysisResult, error)
+	AnalyzeTextMultiple(ctx context.Context, request *domain.TextAnalysisRequest) ([]*domain.TextAnalysisResult, error)
 }

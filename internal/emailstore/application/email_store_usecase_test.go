@@ -22,8 +22,8 @@ func (m *MockEmailStoreRepository) SaveEmail(ctx context.Context, result *openai
 	return args.Error(0)
 }
 
-func (m *MockEmailStoreRepository) GetEmailByID(ctx context.Context, id string) (*domain.Email, error) {
-	args := m.Called(ctx, id)
+func (m *MockEmailStoreRepository) CheckGmailIdExists(ctx context.Context, gmailId string) (*domain.Email, error) {
+	args := m.Called(ctx, gmailId)
 	return args.Get(0).(*domain.Email), args.Error(1)
 }
 
@@ -47,6 +47,16 @@ func (m *MockEmailStoreRepository) WorkTypeExists(ctx context.Context, word stri
 	return args.Bool(0), args.Error(1)
 }
 
+func (m *MockEmailStoreRepository) SaveEmailMultiple(ctx context.Context, result *openaidomain.EmailAnalysisMultipleResult) error {
+	args := m.Called(ctx, result)
+	return args.Error(0)
+}
+
+func (m *MockEmailStoreRepository) GetEmailByGmailId(ctx context.Context, gmail_id string) (*domain.Email, error) {
+	args := m.Called(ctx, gmail_id)
+	return args.Get(0).(*domain.Email), args.Error(1)
+}
+
 func TestEmailStoreUseCaseImpl_SaveEmailAnalysisResult(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -60,7 +70,7 @@ func TestEmailStoreUseCaseImpl_SaveEmailAnalysisResult(t *testing.T) {
 				mockRepo.On("SaveEmail", mock.Anything, mock.AnythingOfType("*domain.EmailAnalysisResult")).Return(nil).Once()
 			},
 			input: &openaidomain.EmailAnalysisResult{
-				ID:           "test-email-id",
+				GmailID:      "test-email-id",
 				Subject:      "テスト件名",
 				From:         "sender@example.com",
 				FromEmail:    "sender@example.com",
@@ -83,7 +93,7 @@ func TestEmailStoreUseCaseImpl_SaveEmailAnalysisResult(t *testing.T) {
 				mockRepo.On("SaveEmail", mock.Anything, mock.AnythingOfType("*domain.EmailAnalysisResult")).Return(domain.ErrInvalidEmailData).Once()
 			},
 			input: &openaidomain.EmailAnalysisResult{
-				ID:      "test-email-id",
+				GmailID: "test-email-id",
 				Subject: "テスト件名",
 			},
 			expectedError: "メール保存エラー: 無効なメールデータです",
@@ -168,7 +178,7 @@ func TestEmailStoreUseCaseImpl_CheckEmailExists(t *testing.T) {
 			ctx := context.Background()
 
 			// Act
-			exists, err := useCase.CheckEmailExists(ctx, tt.input)
+			exists, err := useCase.CheckGmailIdExists(ctx, tt.input)
 
 			// Assert
 			if tt.expectedError == "" {

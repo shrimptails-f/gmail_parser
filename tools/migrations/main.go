@@ -41,7 +41,8 @@ func main() {
 		err = conn.DB.Migrator().DropTable(CreateArrayMigrationSlice()...)
 	}
 	if err != nil {
-		panic(err)
+		fmt.Printf("エラーが発生しました。:%v \n", err)
+		return
 	}
 
 	fmt.Printf("正常に終了しました。\n")

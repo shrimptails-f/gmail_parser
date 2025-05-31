@@ -24,6 +24,14 @@ func (m *MockTextAnalysisService) AnalyzeText(ctx context.Context, request *doma
 	return args.Get(0).(*domain.TextAnalysisResult), args.Error(1)
 }
 
+func (m *MockTextAnalysisService) AnalyzeTextMultiple(ctx context.Context, request *domain.TextAnalysisRequest) ([]*domain.TextAnalysisResult, error) {
+	args := m.Called(ctx, request)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*domain.TextAnalysisResult), args.Error(1)
+}
+
 // MockPromptService はプロンプトサービスのモックです
 type MockPromptService struct {
 	mock.Mock
@@ -176,4 +184,88 @@ func TestTextAnalysisUseCase_DisplayAnalysisResult_正常系_解析結果をタ�
 	// この関数は標準出力に表示するため、エラーが発生しないことを確認
 	err := useCase.DisplayAnalysisResult(result)
 	assert.NoError(t, err)
+}
+
+func TestTextAnalysisUseCase_AnalyzeEmailTextMultiple_正常系_複数案件を含むメールを解析すること(t *testing.T) {
+	// Arrange
+	ctx := context.Background()
+	mockTextAnalysisService := &MockTextAnalysisService{}
+	mockPromptService := &MockPromptService{}
+
+	useCase := NewTextAnalysisUseCase(mockTextAnalysisService, mockPromptService)
+
+	emailText := "案件1: Go開発案件\n案件2: React開発案件"
+	messageID := "test-message-id"
+	subject := "複数案件のご紹介"
+	promptText := "プロンプトテキスト"
+
+	expectedResults := []*domain.TextAnalysisResult{
+		{
+			MessageID: messageID,
+			Subject:   subject,
+			Summary:   "Go開発案件",
+			Language:  "ja",
+		},
+		{
+			MessageID: messageID,
+			Subject:   subject,
+			Summary:   "React開発案件",
+			Language:  "ja",
+		},
+	}
+
+	mockPromptService.On("LoadPrompt", "text_analysis_prompt.txt").Return(promptText, nil)
+	mockTextAnalysisService.On("AnalyzeTextMultiple", ctx, mock.MatchedBy(func(req *domain.TextAnalysisRequest) bool {
+		return req.Text == promptText+"\n\n"+emailText &&
+			req.Metadata["source"] == "email" &&
+			req.Metadata["message_id"] == messageID &&
+			req.Metadata["subject"] == subject
+	})).Return(expectedResults, nil)
+
+	// Act
+	results, err := useCase.AnalyzeEmailTextMultiple(ctx, emailText, messageID, subject)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.Len(t, results, 2)
+	assert.Equal(t, expectedResults[0].Summary, results[0].Summary)
+	assert.Equal(t, expectedResults[1].Summary, results[1].Summary)
+	mockTextAnalysisService.AssertExpectations(t)
+	mockPromptService.AssertExpectations(t)
+}
+
+func TestTextAnalysisUseCase_AnalyzeEmailTextMultiple_正常系_単一案件でも配列で返すこと(t *testing.T) {
+	// Arrange
+	ctx := context.Background()
+	mockTextAnalysisService := &MockTextAnalysisService{}
+	mockPromptService := &MockPromptService{}
+
+	useCase := NewTextAnalysisUseCase(mockTextAnalysisService, mockPromptService)
+
+	emailText := "Go開発案件の詳細"
+	messageID := "test-message-id"
+	subject := "案件のご紹介"
+	promptText := "プロンプトテキスト"
+
+	expectedResults := []*domain.TextAnalysisResult{
+		{
+			MessageID: messageID,
+			Subject:   subject,
+			Summary:   "Go開発案件",
+			Language:  "ja",
+		},
+	}
+
+	mockPromptService.On("LoadPrompt", "text_analysis_prompt.txt").Return(promptText, nil)
+	mockTextAnalysisService.On("AnalyzeTextMultiple", ctx, mock.Anything).Return(expectedResults, nil)
+
+	// Act
+	results, err := useCase.AnalyzeEmailTextMultiple(ctx, emailText, messageID, subject)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.Len(t, results, 1)
+	assert.Equal(t, expectedResults[0].Summary, results[0].Summary)
+	mockTextAnalysisService.AssertExpectations(t)
+	mockPromptService.AssertExpectations(t)
 }

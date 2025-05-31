@@ -15,6 +15,7 @@ import (
 )
 
 func TestEmailStoreRepositoryImpl_SaveEmail(t *testing.T) {
+	t.Parallel()
 	// テスト用DBの準備
 	db, cleanup, err := mysql.CreateNewTestDB()
 	require.NoError(t, err)
@@ -50,7 +51,7 @@ func TestEmailStoreRepositoryImpl_SaveEmail(t *testing.T) {
 		{
 			name: "正常系_新規メール保存成功",
 			input: &openaidomain.EmailAnalysisResult{
-				ID:                  "test-email-id-1",
+				GmailID:             "test-email-id-1",
 				Subject:             "テスト件名",
 				From:                "sender@example.com",
 				FromEmail:           "sender@example.com",
@@ -77,7 +78,7 @@ func TestEmailStoreRepositoryImpl_SaveEmail(t *testing.T) {
 		{
 			name: "正常系_案件以外のメール保存成功",
 			input: &openaidomain.EmailAnalysisResult{
-				ID:           "test-email-id-2",
+				GmailID:      "test-email-id-2",
 				Subject:      "営業メール",
 				From:         "sales@example.com",
 				FromEmail:    "sales@example.com",
@@ -91,7 +92,7 @@ func TestEmailStoreRepositoryImpl_SaveEmail(t *testing.T) {
 		{
 			name: "異常系_重複メールID",
 			input: &openaidomain.EmailAnalysisResult{
-				ID:        "test-email-id-1",
+				GmailID:   "test-email-id-1",
 				Subject:   "重複テスト",
 				From:      "test@example.com",
 				FromEmail: "test@example.com",
@@ -103,7 +104,7 @@ func TestEmailStoreRepositoryImpl_SaveEmail(t *testing.T) {
 				// 事前に同じIDのメールを保存
 				body := "既存メール本文"
 				email := &domain.Email{
-					ID:           "test-email-id-1",
+					GmailID:      "test-email-id-1",
 					Subject:      "既存メール",
 					SenderName:   "existing@example.com",
 					SenderEmail:  "existing@example.com",
@@ -130,7 +131,7 @@ func TestEmailStoreRepositoryImpl_SaveEmail(t *testing.T) {
 
 				// データが正しく保存されているか確認
 				var savedEmail domain.Email
-				result := db.DB.Where("id = ?", tt.input.ID).First(&savedEmail)
+				result := db.DB.Where("gmail_id = ?", tt.input.GmailID).First(&savedEmail)
 				assert.NoError(t, result.Error)
 				assert.Equal(t, tt.input.Subject, savedEmail.Subject)
 				assert.Equal(t, tt.input.From, savedEmail.SenderName)
@@ -140,7 +141,7 @@ func TestEmailStoreRepositoryImpl_SaveEmail(t *testing.T) {
 				// 案件メールの場合、EmailProjectも確認
 				if tt.input.MailCategory == "案件" {
 					var savedProject domain.EmailProject
-					result := db.DB.Where("email_id = ?", tt.input.ID).First(&savedProject)
+					result := db.DB.Where("email_id = ?", savedEmail.ID).First(&savedProject)
 					assert.NoError(t, result.Error)
 					if savedProject.EndTiming != nil {
 						assert.Equal(t, tt.input.EndPeriod, *savedProject.EndTiming)
@@ -167,7 +168,7 @@ func TestEmailStoreRepositoryImpl_SaveEmail(t *testing.T) {
 					// キーワード関連の確認
 					if len(tt.input.Languages) > 0 || len(tt.input.Frameworks) > 0 || len(tt.input.RequiredSkillsMust) > 0 || len(tt.input.RequiredSkillsWant) > 0 {
 						var emailKeywordGroups []domain.EmailKeywordGroup
-						result := db.DB.Where("email_id = ?", tt.input.ID).Find(&emailKeywordGroups)
+						result := db.DB.Where("email_id = ?", savedEmail.ID).Find(&emailKeywordGroups)
 						assert.NoError(t, result.Error)
 						expectedKeywordCount := len(tt.input.Languages) + len(tt.input.Frameworks) + len(tt.input.RequiredSkillsMust) + len(tt.input.RequiredSkillsWant)
 						assert.Equal(t, expectedKeywordCount, len(emailKeywordGroups))
@@ -176,7 +177,7 @@ func TestEmailStoreRepositoryImpl_SaveEmail(t *testing.T) {
 					// ポジション関連の確認
 					if len(tt.input.Positions) > 0 {
 						var emailPositionGroups []domain.EmailPositionGroup
-						result := db.DB.Where("email_id = ?", tt.input.ID).Find(&emailPositionGroups)
+						result := db.DB.Where("email_id = ?", savedEmail.ID).Find(&emailPositionGroups)
 						assert.NoError(t, result.Error)
 						assert.Equal(t, len(tt.input.Positions), len(emailPositionGroups))
 
@@ -195,7 +196,7 @@ func TestEmailStoreRepositoryImpl_SaveEmail(t *testing.T) {
 					// 業務種別関連の確認
 					if len(tt.input.WorkTypes) > 0 {
 						var emailWorkTypeGroups []domain.EmailWorkTypeGroup
-						result := db.DB.Where("email_id = ?", tt.input.ID).Find(&emailWorkTypeGroups)
+						result := db.DB.Where("email_id = ?", savedEmail.ID).Find(&emailWorkTypeGroups)
 						assert.NoError(t, result.Error)
 						assert.Equal(t, len(tt.input.WorkTypes), len(emailWorkTypeGroups))
 
@@ -220,6 +221,7 @@ func TestEmailStoreRepositoryImpl_SaveEmail(t *testing.T) {
 }
 
 func TestEmailStoreRepositoryImpl_GetEmailByID(t *testing.T) {
+	t.Parallel()
 	// テスト用DBの準備
 	db, cleanup, err := mysql.CreateNewTestDB()
 	require.NoError(t, err)
@@ -235,7 +237,7 @@ func TestEmailStoreRepositoryImpl_GetEmailByID(t *testing.T) {
 	// テストデータの準備
 	body := "テスト本文"
 	testEmail := &domain.Email{
-		ID:           "test-email-id",
+		GmailID:      "test-email-id",
 		Subject:      "テスト件名",
 		SenderName:   "test@example.com",
 		SenderEmail:  "test@example.com",
@@ -247,17 +249,17 @@ func TestEmailStoreRepositoryImpl_GetEmailByID(t *testing.T) {
 
 	tests := []struct {
 		name          string
-		emailID       string
+		gmailID       string
 		expectedError string
 	}{
 		{
 			name:          "正常系_メール取得成功",
-			emailID:       "test-email-id",
+			gmailID:       "test-email-id",
 			expectedError: "",
 		},
 		{
 			name:          "異常系_存在しないメール",
-			emailID:       "non-existent-id",
+			gmailID:       "non-existent-id",
 			expectedError: "メールが見つかりません",
 		},
 	}
@@ -265,13 +267,13 @@ func TestEmailStoreRepositoryImpl_GetEmailByID(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Act
-			email, err := repo.GetEmailByID(ctx, tt.emailID)
+			email, err := repo.GetEmailByGmailId(ctx, tt.gmailID)
 
 			// Assert
 			if tt.expectedError == "" {
 				assert.NoError(t, err)
 				assert.NotNil(t, email)
-				assert.Equal(t, tt.emailID, email.ID)
+				assert.Equal(t, tt.gmailID, email.GmailID)
 			} else {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedError)
@@ -282,6 +284,7 @@ func TestEmailStoreRepositoryImpl_GetEmailByID(t *testing.T) {
 }
 
 func TestEmailStoreRepositoryImpl_EmailExists(t *testing.T) {
+	t.Parallel()
 	// テスト用DBの準備
 	db, cleanup, err := mysql.CreateNewTestDB()
 	require.NoError(t, err)
@@ -297,7 +300,7 @@ func TestEmailStoreRepositoryImpl_EmailExists(t *testing.T) {
 	// テストデータの準備
 	body := "既存メール本文"
 	testEmail := &domain.Email{
-		ID:           "existing-email-id",
+		GmailID:      "existing-email-id",
 		Subject:      "既存メール",
 		SenderName:   "test@example.com",
 		SenderEmail:  "test@example.com",
@@ -337,6 +340,7 @@ func TestEmailStoreRepositoryImpl_EmailExists(t *testing.T) {
 }
 
 func TestEmailStoreRepositoryImpl_KeywordExists(t *testing.T) {
+	t.Parallel()
 	// テスト用DBの準備
 	db, cleanup, err := mysql.CreateNewTestDB()
 	require.NoError(t, err)
@@ -395,6 +399,7 @@ func TestEmailStoreRepositoryImpl_KeywordExists(t *testing.T) {
 }
 
 func TestEmailStoreRepositoryImpl_PositionExists(t *testing.T) {
+	t.Parallel()
 	// テスト用DBの準備
 	db, cleanup, err := mysql.CreateNewTestDB()
 	require.NoError(t, err)
@@ -452,6 +457,7 @@ func TestEmailStoreRepositoryImpl_PositionExists(t *testing.T) {
 }
 
 func TestEmailStoreRepositoryImpl_WorkTypeExists(t *testing.T) {
+	t.Parallel()
 	// テスト用DBの準備
 	db, cleanup, err := mysql.CreateNewTestDB()
 	require.NoError(t, err)
@@ -509,6 +515,7 @@ func TestEmailStoreRepositoryImpl_WorkTypeExists(t *testing.T) {
 }
 
 func TestEmailStoreRepositoryImpl_DuplicateKeywordHandling(t *testing.T) {
+	t.Parallel()
 	// テスト用DBの準備
 	db, cleanup, err := mysql.CreateNewTestDB()
 	require.NoError(t, err)
@@ -542,7 +549,7 @@ func TestEmailStoreRepositoryImpl_DuplicateKeywordHandling(t *testing.T) {
 
 	// 1回目のメール保存（新規作成）
 	firstEmail := &openaidomain.EmailAnalysisResult{
-		ID:           "test-email-1",
+		GmailID:      "test-email-1",
 		Subject:      "テスト1",
 		From:         "test1@example.com",
 		FromEmail:    "test1@example.com",
@@ -557,7 +564,7 @@ func TestEmailStoreRepositoryImpl_DuplicateKeywordHandling(t *testing.T) {
 
 	// 2回目のメール保存（既存キーワードを使用）
 	secondEmail := &openaidomain.EmailAnalysisResult{
-		ID:           "test-email-2",
+		GmailID:      "test-email-2",
 		Subject:      "テスト2",
 		From:         "test2@example.com",
 		FromEmail:    "test2@example.com",
@@ -588,6 +595,7 @@ func TestEmailStoreRepositoryImpl_DuplicateKeywordHandling(t *testing.T) {
 
 // TestSaveEmail_DuplicateKeywords は重複キーワードでのエラーをテストします
 func TestSaveEmail_DuplicateKeywords(t *testing.T) {
+	t.Parallel()
 	// テスト用DBの準備
 	db, cleanup, err := mysql.CreateNewTestDB()
 	require.NoError(t, err)
@@ -621,7 +629,7 @@ func TestSaveEmail_DuplicateKeywords(t *testing.T) {
 	remoteFreq := "3"
 
 	result := &openaidomain.EmailAnalysisResult{
-		ID:                  "test-duplicate-keywords-001",
+		GmailID:             "test-duplicate-keywords-001",
 		Subject:             "テスト案件",
 		From:                "テスト送信者",
 		FromEmail:           "test@example.com",
@@ -658,6 +666,7 @@ func TestSaveEmail_DuplicateKeywords(t *testing.T) {
 
 // TestSaveEmail_MultipleEmails は複数メール保存時の重複エラーをテストします
 func TestSaveEmail_MultipleEmails(t *testing.T) {
+	t.Parallel()
 	// テスト用DBの準備
 	db, cleanup, err := mysql.CreateNewTestDB()
 	require.NoError(t, err)
@@ -691,7 +700,7 @@ func TestSaveEmail_MultipleEmails(t *testing.T) {
 	remoteFreq1 := "3"
 
 	result1 := &openaidomain.EmailAnalysisResult{
-		ID:                  "test-multiple-001",
+		GmailID:             "test-multiple-001",
 		Subject:             "テスト案件1",
 		From:                "テスト送信者1",
 		FromEmail:           "test1@example.com",
@@ -722,7 +731,7 @@ func TestSaveEmail_MultipleEmails(t *testing.T) {
 	remoteFreq2 := "2"
 
 	result2 := &openaidomain.EmailAnalysisResult{
-		ID:                  "test-multiple-002",
+		GmailID:             "test-multiple-002",
 		Subject:             "テスト案件2",
 		From:                "テスト送信者2",
 		FromEmail:           "test2@example.com",

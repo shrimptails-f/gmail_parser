@@ -11,6 +11,7 @@ import (
 )
 
 func TestOpenAIService_AnalyzeText_正常系_OpenAI_APIを呼び出してテキスト解析を実行すること(t *testing.T) {
+	t.Parallel()
 	// Arrange
 	ctx := context.Background()
 	service := NewOpenAIService("test-api-key")
@@ -51,6 +52,7 @@ func TestOpenAIService_AnalyzeText_正常系_OpenAI_APIを呼び出してテキ�
 }
 
 func TestOpenAIService_AnalyzeText_異常系_空のテキストでエラーを返すこと(t *testing.T) {
+	t.Parallel()
 	// Arrange
 	ctx := context.Background()
 	service := NewOpenAIService("test-api-key")
@@ -72,6 +74,7 @@ func TestOpenAIService_AnalyzeText_異常系_空のテキストでエラーを�
 }
 
 func TestOpenAIService_AnalyzeText_異常系_無効なAPIキーでエラーを返すこと(t *testing.T) {
+	t.Parallel()
 	// Arrange
 	ctx := context.Background()
 	service := NewOpenAIService("invalid-api-key")
@@ -93,6 +96,7 @@ func TestOpenAIService_AnalyzeText_異常系_無効なAPIキーでエラーを�
 }
 
 func TestOpenAIService_buildPrompt_正常系_リクエストからプロンプトを構築すること(t *testing.T) {
+	t.Parallel()
 	// Arrange
 	service := NewOpenAIService("test-api-key")
 
@@ -123,6 +127,7 @@ func TestOpenAIService_buildPrompt_正常系_リクエストからプロンプ�
 }
 
 func TestOpenAIService_parseResponse_正常系_OpenAIレスポンスを解析結果に変換すること(t *testing.T) {
+	t.Parallel()
 	// Arrange
 	service := NewOpenAIService("test-api-key")
 
@@ -159,6 +164,7 @@ func TestOpenAIService_parseResponse_正常系_OpenAIレスポンスを解析結
 }
 
 func TestOpenAIService_parseResponse_異常系_無効なJSONでエラーを返すこと(t *testing.T) {
+	t.Parallel()
 	// Arrange
 	service := NewOpenAIService("test-api-key")
 
