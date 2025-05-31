@@ -32,8 +32,8 @@ func (m *MockEmailStoreRepository) EmailExists(ctx context.Context, id string) (
 	return args.Bool(0), args.Error(1)
 }
 
-func (m *MockEmailStoreRepository) KeywordExists(ctx context.Context, word string) (bool, error) {
-	args := m.Called(ctx, word)
+func (m *MockEmailStoreRepository) KeywordExists(word string) (bool, error) {
+	args := m.Called(word)
 	return args.Bool(0), args.Error(1)
 }
 

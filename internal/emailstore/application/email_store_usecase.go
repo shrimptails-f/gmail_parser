@@ -76,7 +76,7 @@ func (u *EmailStoreUseCaseImpl) CheckKeywordExists(ctx context.Context, word str
 		return false, fmt.Errorf("キーワードが空です")
 	}
 
-	exists, err := u.emailStoreRepository.KeywordExists(ctx, word)
+	exists, err := u.emailStoreRepository.KeywordExists(word)
 	if err != nil {
 		return false, fmt.Errorf("キーワード存在チェックエラー: %w", err)
 	}

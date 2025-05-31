@@ -80,30 +80,39 @@ type EntryTiming struct {
 
 // KeywordGroup は正規化された技術キーワードのマスタを表すドメインモデルです
 type KeywordGroup struct {
-	KeywordGroupID uint      `gorm:"primaryKey" json:"keyword_group_id"`                                            // キーワードグループID
-	Name           string    `gorm:"unique;size:255;not null" json:"name"`                                          // キーワード名（正規化）
-	Type           string    `gorm:"type:enum('language','framework','skill','tool','other');not null" json:"type"` // 分類
-	CreatedAt      time.Time `json:"created_at"`                                                                    // 作成日時
-	UpdatedAt      time.Time `json:"updated_at"`                                                                    // 更新日時
+	KeywordGroupID uint   `gorm:"primaryKey;autoIncrement"`
+	Name           string `gorm:"unique;size:255;not null"`
+	Type           string `gorm:"type:enum('language','framework','skill','tool','other');not null"`
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 
 	// Words []KeyWord `gorm:"foreignKey:KeywordGroupID;references:KeywordGroupID" json:"words"` // 表記ゆれ一覧（統合テスト時はコメントアウト）
 }
 
+// 登録単語1に対してKeywordGroupを複数登録するための中間テーブル
+type KeywordGroupWordLink struct {
+	KeywordGroupID uint `gorm:"primaryKey"`
+	KeyWordID      uint `gorm:"primaryKey"`
+	CreatedAt      time.Time
+
+	// 循環してて完全に積んでるのでコメントアウト
+	// KeyWord KeyWord `gorm:"foreignKey:KeyWordID;references:ID"`
+}
+
 // KeyWord はキーワードの表記ゆれをKeywordGroupに紐付けるドメインモデルです
 type KeyWord struct {
-	ID             uint      `gorm:"primaryKey" json:"id"`             // 表記ゆれID
-	KeywordGroupID uint      `gorm:"not null" json:"keyword_group_id"` // 対応するキーワードグループID
-	Word           string    `gorm:"size:255;not null" json:"word"`    // 表記ゆれ文字列
-	CreatedAt      time.Time `json:"created_at"`                       // 作成日時
-	UpdatedAt      time.Time `json:"updated_at"`                       // 更新日時
+	ID        uint   `gorm:"primaryKey;autoIncrement"`
+	Word      string `gorm:"size:255;not null;unique"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 // EmailKeywordGroup はEmailとKeywordGroupの多対多中間テーブルを表すドメインモデルです
 type EmailKeywordGroup struct {
-	EmailID        uint      `gorm:"primaryKey;size:32" json:"email_id"`                                           // メールID
-	KeywordGroupID uint      `gorm:"primaryKey" json:"keyword_group_id"`                                           // キーワードグループID
-	Type           string    `gorm:"primaryKey;type:enum('MUST','WANT','LANGUAGE','FRAMEWORK');index" json:"type"` // スキル種別
-	CreatedAt      time.Time `json:"created_at"`                                                                   // 登録日時
+	EmailID        uint      `gorm:"not null;uniqueIndex:idx_email_keyword_type"`
+	KeywordGroupID uint      `gorm:"not null;uniqueIndex:idx_email_keyword_type"`
+	Type           string    `gorm:"type:enum('MUST','WANT','LANGUAGE','FRAMEWORK');not null;uniqueIndex:idx_email_keyword_type"`
+	CreatedAt      time.Time // 登録日時
 
 	// リレーション
 	Email Email `gorm:"foreignKey:EmailID;references:ID" json:"email"`

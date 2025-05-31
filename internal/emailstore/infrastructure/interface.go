@@ -23,7 +23,7 @@ type EmailStoreRepository interface {
 	EmailExists(ctx context.Context, id string) (bool, error)
 
 	// KeywordExists はキーワードが既に存在するかチェックします
-	KeywordExists(ctx context.Context, word string) (bool, error)
+	KeywordExists(word string) (bool, error)
 
 	// PositionExists はポジションが既に存在するかチェックします
 	PositionExists(ctx context.Context, word string) (bool, error)
