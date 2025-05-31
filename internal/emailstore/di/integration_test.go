@@ -1,5 +1,3 @@
-//go:build integration
-
 // Package di はメール保存機能の依存性注入の統合テストを提供します。
 package di
 

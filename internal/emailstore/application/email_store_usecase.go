@@ -3,6 +3,7 @@
 package application
 
 import (
+	r "business/internal/emailstore/infrastructure"
 	openaidomain "business/internal/openai/domain"
 	"context"
 	"fmt"
@@ -10,11 +11,11 @@ import (
 
 // EmailStoreUseCaseImpl はメール保存のユースケース実装です
 type EmailStoreUseCaseImpl struct {
-	emailStoreRepository EmailStoreRepository
+	emailStoreRepository r.EmailStoreRepository
 }
 
 // NewEmailStoreUseCase はメール保存ユースケースを作成します
-func NewEmailStoreUseCase(emailStoreRepository EmailStoreRepository) EmailStoreUseCase {
+func NewEmailStoreUseCase(emailStoreRepository r.EmailStoreRepository) EmailStoreUseCase {
 	return &EmailStoreUseCaseImpl{
 		emailStoreRepository: emailStoreRepository,
 	}

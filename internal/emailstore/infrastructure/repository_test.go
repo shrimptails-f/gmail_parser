@@ -1,5 +1,3 @@
-//go:build integration
-
 // Package infrastructure はメール保存機能のインフラストラクチャ層のテストを提供します。
 package infrastructure
 

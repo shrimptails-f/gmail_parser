@@ -3,7 +3,6 @@
 package infrastructure
 
 import (
-	"business/internal/emailstore/application"
 	"business/internal/emailstore/domain"
 	openaidomain "business/internal/openai/domain"
 	"context"
@@ -20,7 +19,7 @@ type EmailStoreRepositoryImpl struct {
 }
 
 // NewEmailStoreRepository はメール保存リポジトリを作成します
-func NewEmailStoreRepository(db *gorm.DB) application.EmailStoreRepository {
+func NewEmailStoreRepository(db *gorm.DB) EmailStoreRepository {
 	return &EmailStoreRepositoryImpl{
 		db: db,
 	}
