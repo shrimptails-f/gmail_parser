@@ -3,7 +3,7 @@
 package application
 
 import (
-	"business/internal/auth/domain"
+	"business/internal/gmail/domain"
 	"context"
 	"strings"
 	"testing"

@@ -3,7 +3,7 @@
 package infrastructure
 
 import (
-	"business/internal/auth/application"
+	"business/internal/gmail/application"
 	"fmt"
 	"os"
 )

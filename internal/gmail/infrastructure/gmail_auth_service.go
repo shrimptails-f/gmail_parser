@@ -3,8 +3,8 @@
 package infrastructure
 
 import (
-	"business/internal/auth/application"
-	"business/internal/auth/domain"
+	"business/internal/gmail/application"
+	"business/internal/gmail/domain"
 	"context"
 	"encoding/json"
 	"fmt"

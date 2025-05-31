@@ -3,7 +3,7 @@
 package application
 
 import (
-	authdomain "business/internal/auth/domain"
+	authdomain "business/internal/gmail/domain"
 	"business/internal/openai/domain"
 	"context"
 )

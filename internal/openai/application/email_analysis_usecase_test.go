@@ -2,7 +2,7 @@
 package application
 
 import (
-	gmail "business/internal/auth/domain"
+	gmail "business/internal/gmail/domain"
 	"business/internal/openai/domain"
 	"context"
 	"testing"

@@ -3,9 +3,9 @@
 package di
 
 import (
-	"business/internal/auth/application"
-	"business/internal/auth/domain"
-	"business/internal/auth/infrastructure"
+	"business/internal/gmail/application"
+	"business/internal/gmail/domain"
+	"business/internal/gmail/infrastructure"
 
 	"gorm.io/gorm"
 )

@@ -3,10 +3,10 @@
 package main
 
 import (
-	"business/internal/auth/application"
-	"business/internal/auth/domain"
-	"business/internal/auth/infrastructure"
 	emailstoredi "business/internal/emailstore/di"
+	"business/internal/gmail/application"
+	"business/internal/gmail/domain"
+	"business/internal/gmail/infrastructure"
 	httpinfra "business/internal/http/infrastructure"
 	aiapp "business/internal/openai/application"
 	openaidomain "business/internal/openai/domain"

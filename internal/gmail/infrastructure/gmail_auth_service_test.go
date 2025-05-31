@@ -3,7 +3,7 @@
 package infrastructure
 
 import (
-	"business/internal/auth/domain"
+	"business/internal/gmail/domain"
 	"context"
 	"encoding/json"
 	"io/ioutil"
