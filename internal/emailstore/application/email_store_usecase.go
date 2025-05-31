@@ -35,3 +35,59 @@ func (u *EmailStoreUseCaseImpl) SaveEmailAnalysisResult(ctx context.Context, res
 
 	return nil
 }
+
+// CheckEmailExists はメールIDの存在チェックを行います
+func (u *EmailStoreUseCaseImpl) CheckEmailExists(ctx context.Context, emailID string) (bool, error) {
+	if emailID == "" {
+		return false, fmt.Errorf("メールIDが空です")
+	}
+
+	exists, err := u.emailStoreRepository.EmailExists(ctx, emailID)
+	if err != nil {
+		return false, fmt.Errorf("メール存在チェックエラー: %w", err)
+	}
+
+	return exists, nil
+}
+
+// CheckKeywordExists はキーワードの存在チェックを行います
+func (u *EmailStoreUseCaseImpl) CheckKeywordExists(ctx context.Context, word string) (bool, error) {
+	if word == "" {
+		return false, fmt.Errorf("キーワードが空です")
+	}
+
+	exists, err := u.emailStoreRepository.KeywordExists(ctx, word)
+	if err != nil {
+		return false, fmt.Errorf("キーワード存在チェックエラー: %w", err)
+	}
+
+	return exists, nil
+}
+
+// CheckPositionExists はポジションの存在チェックを行います
+func (u *EmailStoreUseCaseImpl) CheckPositionExists(ctx context.Context, word string) (bool, error) {
+	if word == "" {
+		return false, fmt.Errorf("ポジションが空です")
+	}
+
+	exists, err := u.emailStoreRepository.PositionExists(ctx, word)
+	if err != nil {
+		return false, fmt.Errorf("ポジション存在チェックエラー: %w", err)
+	}
+
+	return exists, nil
+}
+
+// CheckWorkTypeExists は業務種別の存在チェックを行います
+func (u *EmailStoreUseCaseImpl) CheckWorkTypeExists(ctx context.Context, word string) (bool, error) {
+	if word == "" {
+		return false, fmt.Errorf("業務種別が空です")
+	}
+
+	exists, err := u.emailStoreRepository.WorkTypeExists(ctx, word)
+	if err != nil {
+		return false, fmt.Errorf("業務種別存在チェックエラー: %w", err)
+	}
+
+	return exists, nil
+}

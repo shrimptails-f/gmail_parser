@@ -32,6 +32,21 @@ func (m *MockEmailStoreRepository) EmailExists(ctx context.Context, id string) (
 	return args.Bool(0), args.Error(1)
 }
 
+func (m *MockEmailStoreRepository) KeywordExists(ctx context.Context, word string) (bool, error) {
+	args := m.Called(ctx, word)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *MockEmailStoreRepository) PositionExists(ctx context.Context, word string) (bool, error) {
+	args := m.Called(ctx, word)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *MockEmailStoreRepository) WorkTypeExists(ctx context.Context, word string) (bool, error) {
+	args := m.Called(ctx, word)
+	return args.Bool(0), args.Error(1)
+}
+
 func TestEmailStoreUseCaseImpl_SaveEmailAnalysisResult(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -100,6 +115,258 @@ func TestEmailStoreUseCaseImpl_SaveEmailAnalysisResult(t *testing.T) {
 			} else {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedError)
+			}
+
+			mockRepo.AssertExpectations(t)
+		})
+	}
+}
+
+func TestEmailStoreUseCaseImpl_CheckEmailExists(t *testing.T) {
+	tests := []struct {
+		name          string
+		setupMock     func(*MockEmailStoreRepository)
+		input         string
+		expected      bool
+		expectedError string
+	}{
+		{
+			name: "正常系_メール存在",
+			setupMock: func(mockRepo *MockEmailStoreRepository) {
+				mockRepo.On("EmailExists", mock.Anything, "existing-email-id").Return(true, nil).Once()
+			},
+			input:         "existing-email-id",
+			expected:      true,
+			expectedError: "",
+		},
+		{
+			name: "正常系_メール存在しない",
+			setupMock: func(mockRepo *MockEmailStoreRepository) {
+				mockRepo.On("EmailExists", mock.Anything, "non-existing-email-id").Return(false, nil).Once()
+			},
+			input:         "non-existing-email-id",
+			expected:      false,
+			expectedError: "",
+		},
+		{
+			name: "異常系_空のメールID",
+			setupMock: func(mockRepo *MockEmailStoreRepository) {
+				// モックの設定なし（呼び出されない）
+			},
+			input:         "",
+			expected:      false,
+			expectedError: "メールIDが空です",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			mockRepo := new(MockEmailStoreRepository)
+			tt.setupMock(mockRepo)
+			useCase := NewEmailStoreUseCase(mockRepo)
+			ctx := context.Background()
+
+			// Act
+			exists, err := useCase.CheckEmailExists(ctx, tt.input)
+
+			// Assert
+			if tt.expectedError == "" {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expected, exists)
+			} else {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError)
+				assert.False(t, exists)
+			}
+
+			mockRepo.AssertExpectations(t)
+		})
+	}
+}
+
+func TestEmailStoreUseCaseImpl_CheckKeywordExists(t *testing.T) {
+	tests := []struct {
+		name          string
+		setupMock     func(*MockEmailStoreRepository)
+		input         string
+		expected      bool
+		expectedError string
+	}{
+		{
+			name: "正常系_キーワード存在",
+			setupMock: func(mockRepo *MockEmailStoreRepository) {
+				mockRepo.On("KeywordExists", mock.Anything, "Go").Return(true, nil).Once()
+			},
+			input:         "Go",
+			expected:      true,
+			expectedError: "",
+		},
+		{
+			name: "正常系_キーワード存在しない",
+			setupMock: func(mockRepo *MockEmailStoreRepository) {
+				mockRepo.On("KeywordExists", mock.Anything, "Java").Return(false, nil).Once()
+			},
+			input:         "Java",
+			expected:      false,
+			expectedError: "",
+		},
+		{
+			name: "異常系_空のキーワード",
+			setupMock: func(mockRepo *MockEmailStoreRepository) {
+				// モックの設定なし（呼び出されない）
+			},
+			input:         "",
+			expected:      false,
+			expectedError: "キーワードが空です",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			mockRepo := new(MockEmailStoreRepository)
+			tt.setupMock(mockRepo)
+			useCase := NewEmailStoreUseCase(mockRepo)
+			ctx := context.Background()
+
+			// Act
+			exists, err := useCase.CheckKeywordExists(ctx, tt.input)
+
+			// Assert
+			if tt.expectedError == "" {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expected, exists)
+			} else {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError)
+				assert.False(t, exists)
+			}
+
+			mockRepo.AssertExpectations(t)
+		})
+	}
+}
+
+func TestEmailStoreUseCaseImpl_CheckPositionExists(t *testing.T) {
+	tests := []struct {
+		name          string
+		setupMock     func(*MockEmailStoreRepository)
+		input         string
+		expected      bool
+		expectedError string
+	}{
+		{
+			name: "正常系_ポジション存在",
+			setupMock: func(mockRepo *MockEmailStoreRepository) {
+				mockRepo.On("PositionExists", mock.Anything, "PM").Return(true, nil).Once()
+			},
+			input:         "PM",
+			expected:      true,
+			expectedError: "",
+		},
+		{
+			name: "正常系_ポジション存在しない",
+			setupMock: func(mockRepo *MockEmailStoreRepository) {
+				mockRepo.On("PositionExists", mock.Anything, "SE").Return(false, nil).Once()
+			},
+			input:         "SE",
+			expected:      false,
+			expectedError: "",
+		},
+		{
+			name: "異常系_空のポジション",
+			setupMock: func(mockRepo *MockEmailStoreRepository) {
+				// モックの設定なし（呼び出されない）
+			},
+			input:         "",
+			expected:      false,
+			expectedError: "ポジションが空です",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			mockRepo := new(MockEmailStoreRepository)
+			tt.setupMock(mockRepo)
+			useCase := NewEmailStoreUseCase(mockRepo)
+			ctx := context.Background()
+
+			// Act
+			exists, err := useCase.CheckPositionExists(ctx, tt.input)
+
+			// Assert
+			if tt.expectedError == "" {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expected, exists)
+			} else {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError)
+				assert.False(t, exists)
+			}
+
+			mockRepo.AssertExpectations(t)
+		})
+	}
+}
+
+func TestEmailStoreUseCaseImpl_CheckWorkTypeExists(t *testing.T) {
+	tests := []struct {
+		name          string
+		setupMock     func(*MockEmailStoreRepository)
+		input         string
+		expected      bool
+		expectedError string
+	}{
+		{
+			name: "正常系_業務種別存在",
+			setupMock: func(mockRepo *MockEmailStoreRepository) {
+				mockRepo.On("WorkTypeExists", mock.Anything, "バックエンド開発").Return(true, nil).Once()
+			},
+			input:         "バックエンド開発",
+			expected:      true,
+			expectedError: "",
+		},
+		{
+			name: "正常系_業務種別存在しない",
+			setupMock: func(mockRepo *MockEmailStoreRepository) {
+				mockRepo.On("WorkTypeExists", mock.Anything, "フロントエンド開発").Return(false, nil).Once()
+			},
+			input:         "フロントエンド開発",
+			expected:      false,
+			expectedError: "",
+		},
+		{
+			name: "異常系_空の業務種別",
+			setupMock: func(mockRepo *MockEmailStoreRepository) {
+				// モックの設定なし（呼び出されない）
+			},
+			input:         "",
+			expected:      false,
+			expectedError: "業務種別が空です",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			mockRepo := new(MockEmailStoreRepository)
+			tt.setupMock(mockRepo)
+			useCase := NewEmailStoreUseCase(mockRepo)
+			ctx := context.Background()
+
+			// Act
+			exists, err := useCase.CheckWorkTypeExists(ctx, tt.input)
+
+			// Assert
+			if tt.expectedError == "" {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expected, exists)
+			} else {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError)
+				assert.False(t, exists)
 			}
 
 			mockRepo.AssertExpectations(t)

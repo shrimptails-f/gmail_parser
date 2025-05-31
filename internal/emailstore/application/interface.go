@@ -11,4 +11,16 @@ import (
 type EmailStoreUseCase interface {
 	// SaveEmailAnalysisResult はメール分析結果を保存します
 	SaveEmailAnalysisResult(ctx context.Context, result *openaidomain.EmailAnalysisResult) error
+
+	// CheckEmailExists はメールIDの存在チェックを行います
+	CheckEmailExists(ctx context.Context, emailID string) (bool, error)
+
+	// CheckKeywordExists はキーワードの存在チェックを行います
+	CheckKeywordExists(ctx context.Context, word string) (bool, error)
+
+	// CheckPositionExists はポジションの存在チェックを行います
+	CheckPositionExists(ctx context.Context, word string) (bool, error)
+
+	// CheckWorkTypeExists は業務種別の存在チェックを行います
+	CheckWorkTypeExists(ctx context.Context, word string) (bool, error)
 }
