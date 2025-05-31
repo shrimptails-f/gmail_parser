@@ -40,10 +40,20 @@ func TestEmailAnalysisUseCaseImpl_AnalyzeEmailContent(t *testing.T) {
 				Body:    "テストメール本文",
 			},
 			mockResult: &domain.EmailAnalysisResult{
-				MailCategory: "案件",
-				StartPeriod:  []string{"2025/06/01"},
-				EndPeriod:    "~長期",
-				WorkLocation: "東京都",
+				PriceFrom:           intPtr(700000),
+				PriceTo:             intPtr(900000),
+				MailCategory:        "案件",
+				StartPeriod:         []string{"2025/06/01"},
+				EndPeriod:           "~長期",
+				WorkLocation:        "東京都",
+				Languages:           []string{"Go", "TypeScript"},
+				Frameworks:          []string{"React", "Vue.js"},
+				Positions:           []string{"バックエンドエンジニア", "フロントエンドエンジニア"},
+				WorkTypes:           []string{"設計", "実装", "テスト"},
+				RequiredSkillsMust:  []string{"Go経験3年以上", "TypeScript経験2年以上"},
+				RequiredSkillsWant:  []string{"AWS経験", "Docker経験"},
+				RemoteWorkCategory:  "フルリモート可",
+				RemoteWorkFrequency: stringPtr("週5日"),
 			},
 			mockError:     nil,
 			expectedError: "",
@@ -88,12 +98,28 @@ func TestEmailAnalysisUseCaseImpl_AnalyzeEmailContent(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.NotNil(t, result)
+				// Gmail情報の検証
 				assert.Equal(t, tt.message.ID, result.GmailID)
 				assert.Equal(t, tt.message.Subject, result.Subject)
 				assert.Equal(t, tt.message.From, result.From)
 				assert.Equal(t, "test@example.com", result.FromEmail)
 				assert.Equal(t, tt.message.Date, result.Date)
 				assert.Equal(t, tt.message.Body, result.Body)
+				// AI分析結果の検証
+				assert.Equal(t, tt.mockResult.MailCategory, result.MailCategory)
+				assert.Equal(t, tt.mockResult.StartPeriod, result.StartPeriod)
+				assert.Equal(t, tt.mockResult.EndPeriod, result.EndPeriod)
+				assert.Equal(t, tt.mockResult.WorkLocation, result.WorkLocation)
+				assert.Equal(t, tt.mockResult.PriceFrom, result.PriceFrom)
+				assert.Equal(t, tt.mockResult.PriceTo, result.PriceTo)
+				assert.Equal(t, tt.mockResult.Languages, result.Languages)
+				assert.Equal(t, tt.mockResult.Frameworks, result.Frameworks)
+				assert.Equal(t, tt.mockResult.Positions, result.Positions)
+				assert.Equal(t, tt.mockResult.WorkTypes, result.WorkTypes)
+				assert.Equal(t, tt.mockResult.RequiredSkillsMust, result.RequiredSkillsMust)
+				assert.Equal(t, tt.mockResult.RequiredSkillsWant, result.RequiredSkillsWant)
+				assert.Equal(t, tt.mockResult.RemoteWorkCategory, result.RemoteWorkCategory)
+				assert.Equal(t, tt.mockResult.RemoteWorkFrequency, result.RemoteWorkFrequency)
 			}
 
 			// モックの期待が満たされたか確認
@@ -111,19 +137,25 @@ func TestEmailAnalysisUseCaseImpl_DisplayEmailAnalysisResult(t *testing.T) {
 		{
 			name: "正常系_結果表示成功",
 			result: &domain.EmailAnalysisResult{
-				Subject:      "テスト件名",
-				From:         "Test User",
-				FromEmail:    "test@example.com",
-				Date:         time.Date(2025, 5, 1, 0, 0, 0, 0, time.UTC),
-				Body:         "テストメール本文",
-				MailCategory: "案件",
-				StartPeriod:  []string{"2025/06/01"},
-				EndPeriod:    "~長期",
-				WorkLocation: "東京都",
-				PriceFrom:    intPtr(800000),
-				PriceTo:      intPtr(900000),
-				Languages:    []string{"TypeScript", "JavaScript"},
-				Frameworks:   []string{"React"},
+				Subject:             "テスト件名",
+				From:                "Test User",
+				FromEmail:           "test@example.com",
+				Date:                time.Date(2025, 5, 1, 0, 0, 0, 0, time.UTC),
+				Body:                "テストメール本文",
+				MailCategory:        "案件",
+				StartPeriod:         []string{"2025/06/01"},
+				EndPeriod:           "~長期",
+				WorkLocation:        "東京都",
+				PriceFrom:           intPtr(800000),
+				PriceTo:             intPtr(900000),
+				Languages:           []string{"TypeScript", "JavaScript"},
+				Frameworks:          []string{"React"},
+				Positions:           []string{"フロントエンドエンジニア"},
+				WorkTypes:           []string{"実装", "テスト"},
+				RequiredSkillsMust:  []string{"React経験3年以上"},
+				RequiredSkillsWant:  []string{"TypeScript経験"},
+				RemoteWorkCategory:  "一部リモート可",
+				RemoteWorkFrequency: stringPtr("週2-3日"),
 			},
 			expectedError: "",
 		},
@@ -266,4 +298,9 @@ func Test_formatStringArray(t *testing.T) {
 // intPtr はintのポインタを返すヘルパー関数です
 func intPtr(i int) *int {
 	return &i
+}
+
+// stringPtr はstringのポインタを返すヘルパー関数です
+func stringPtr(s string) *string {
+	return &s
 }

@@ -10,6 +10,7 @@ import (
 	aiapp "business/internal/openai/application"
 	openaidomain "business/internal/openai/domain"
 	aiinfra "business/internal/openai/infrastructure"
+
 	"business/tools/logger"
 	"business/tools/mysql"
 	"context"
@@ -478,20 +479,217 @@ func convertToProjectAnalysisResult(result *openaidomain.TextAnalysisResult) ope
 		RemoteWorkFrequency: nil,
 	}
 
-	// キーワードから技術情報を抽出
-	for _, keyword := range result.Keywords {
-		switch keyword.Category {
-		case "言語":
-			project.Languages = append(project.Languages, keyword.Text)
-		case "フレームワーク":
-			project.Frameworks = append(project.Frameworks, keyword.Text)
+	// デバッグ: RawResponseの内容を確認
+	fmt.Printf("=== デバッグ: RawResponse ===\n")
+	for key, value := range result.RawResponse {
+		fmt.Printf("Key: %s, Value: %+v\n", key, value)
+	}
+	fmt.Printf("========================\n")
+
+	// RawResponseからOpenAIの解析結果を取得
+	if rawResponse, exists := result.RawResponse["email_project"]; exists {
+		// openai_service.goのEmailProjectResponseを使用して型アサーション
+		if emailProject, ok := rawResponse.(aiinfra.EmailProjectResponse); ok {
+			fmt.Printf("=== 構造体として解析成功 ===\n")
+			fmt.Printf("ProjectName: %s\n", emailProject.ProjectName)
+			fmt.Printf("SalaryFrom: %d\n", emailProject.SalaryFrom)
+			fmt.Printf("SalaryTo: %d\n", emailProject.SalaryTo)
+			fmt.Printf("WorkLocation: %s\n", emailProject.WorkLocation)
+
+			// 案件名
+			if emailProject.ProjectName != "" {
+				project.ProjectName = emailProject.ProjectName
+			}
+
+			// 単価FROM
+			if emailProject.SalaryFrom > 0 {
+				project.PriceFrom = &emailProject.SalaryFrom
+			}
+
+			// 単価TO
+			if emailProject.SalaryTo > 0 {
+				project.PriceTo = &emailProject.SalaryTo
+			}
+
+			// 勤務場所
+			if emailProject.WorkLocation != "" {
+				project.WorkLocation = emailProject.WorkLocation
+			}
+
+			// 終了時期
+			if emailProject.EndDate != "" {
+				project.EndPeriod = emailProject.EndDate
+			}
+
+			// 入場時期・開始時期
+			project.StartPeriod = emailProject.StartDates
+
+			// 言語
+			project.Languages = emailProject.Languages
+
+			// フレームワーク
+			project.Frameworks = emailProject.Frameworks
+
+			// ポジション
+			project.Positions = emailProject.Positions
+
+			// 求めるスキル MUST
+			project.RequiredSkillsMust = emailProject.RequiredSkills
+
+			// 求めるスキル WANT
+			project.RequiredSkillsWant = emailProject.PreferredSkills
+
+			// リモートワーク区分
+			if emailProject.RemoteWorkType != "" {
+				project.RemoteWorkCategory = emailProject.RemoteWorkType
+			}
+
+			// リモートワークの頻度
+			if emailProject.RemoteFrequency != "" {
+				project.RemoteWorkFrequency = &emailProject.RemoteFrequency
+			}
+		} else if emailProject, ok := rawResponse.(map[string]interface{}); ok {
+			// 案件名
+			if projectName, ok := emailProject["案件名"].(string); ok && projectName != "" {
+				project.ProjectName = projectName
+			}
+
+			// 単価FROM
+			if salaryFrom, ok := emailProject["単価FROM"]; ok {
+				switch v := salaryFrom.(type) {
+				case float64:
+					if v > 0 {
+						intValue := int(v)
+						project.PriceFrom = &intValue
+					}
+				case int:
+					if v > 0 {
+						project.PriceFrom = &v
+					}
+				}
+			}
+
+			// 単価TO
+			if salaryTo, ok := emailProject["単価TO"]; ok {
+				switch v := salaryTo.(type) {
+				case float64:
+					if v > 0 {
+						intValue := int(v)
+						project.PriceTo = &intValue
+					}
+				case int:
+					if v > 0 {
+						project.PriceTo = &v
+					}
+				}
+			}
+
+			// 勤務場所
+			if workLocation, ok := emailProject["勤務場所"].(string); ok && workLocation != "" {
+				project.WorkLocation = workLocation
+			}
+
+			// 終了時期
+			if endDate, ok := emailProject["終了時期"].(string); ok && endDate != "" {
+				project.EndPeriod = endDate
+			}
+
+			// 入場時期・開始時期
+			if startDates, ok := emailProject["入場時期・開始時期"]; ok {
+				if startDatesArray, ok := startDates.([]interface{}); ok {
+					for _, startDate := range startDatesArray {
+						if startDateStr, ok := startDate.(string); ok && startDateStr != "" {
+							project.StartPeriod = append(project.StartPeriod, startDateStr)
+						}
+					}
+				}
+			}
+
+			// 言語
+			if languages, ok := emailProject["言語"]; ok {
+				if languagesArray, ok := languages.([]interface{}); ok {
+					for _, lang := range languagesArray {
+						if langStr, ok := lang.(string); ok && langStr != "" {
+							project.Languages = append(project.Languages, langStr)
+						}
+					}
+				}
+			}
+
+			// フレームワーク
+			if frameworks, ok := emailProject["フレームワーク"]; ok {
+				if frameworksArray, ok := frameworks.([]interface{}); ok {
+					for _, fw := range frameworksArray {
+						if fwStr, ok := fw.(string); ok && fwStr != "" {
+							project.Frameworks = append(project.Frameworks, fwStr)
+						}
+					}
+				}
+			}
+
+			// ポジション
+			if positions, ok := emailProject["ポジション"]; ok {
+				if positionsArray, ok := positions.([]interface{}); ok {
+					for _, pos := range positionsArray {
+						if posStr, ok := pos.(string); ok && posStr != "" {
+							project.Positions = append(project.Positions, posStr)
+						}
+					}
+				}
+			}
+
+			// 求めるスキル MUST
+			if mustSkills, ok := emailProject["求めるスキル MUST"]; ok {
+				if mustSkillsArray, ok := mustSkills.([]interface{}); ok {
+					for _, skill := range mustSkillsArray {
+						if skillStr, ok := skill.(string); ok && skillStr != "" {
+							project.RequiredSkillsMust = append(project.RequiredSkillsMust, skillStr)
+						}
+					}
+				}
+			}
+
+			// 求めるスキル WANT
+			if wantSkills, ok := emailProject["求めるスキル WANT"]; ok {
+				if wantSkillsArray, ok := wantSkills.([]interface{}); ok {
+					for _, skill := range wantSkillsArray {
+						if skillStr, ok := skill.(string); ok && skillStr != "" {
+							project.RequiredSkillsWant = append(project.RequiredSkillsWant, skillStr)
+						}
+					}
+				}
+			}
+
+			// リモートワーク区分
+			if remoteType, ok := emailProject["リモートワーク区分"].(string); ok && remoteType != "" {
+				project.RemoteWorkCategory = remoteType
+			}
+
+			// リモートワークの頻度
+			if remoteFreq, ok := emailProject["リモートワークの頻度"].(string); ok && remoteFreq != "" {
+				project.RemoteWorkFrequency = &remoteFreq
+			}
 		}
 	}
 
-	// エンティティからポジション情報を抽出
-	for _, entity := range result.Entities {
-		if entity.Type == "POSITION" {
-			project.Positions = append(project.Positions, entity.Name)
+	// フォールバック: キーワードから技術情報を抽出（OpenAIの解析結果がない場合）
+	if len(project.Languages) == 0 && len(project.Frameworks) == 0 {
+		for _, keyword := range result.Keywords {
+			switch keyword.Category {
+			case "言語":
+				project.Languages = append(project.Languages, keyword.Text)
+			case "フレームワーク":
+				project.Frameworks = append(project.Frameworks, keyword.Text)
+			}
+		}
+	}
+
+	// フォールバック: エンティティからポジション情報を抽出（OpenAIの解析結果がない場合）
+	if len(project.Positions) == 0 {
+		for _, entity := range result.Entities {
+			if entity.Type == "POSITION" {
+				project.Positions = append(project.Positions, entity.Name)
+			}
 		}
 	}
 
