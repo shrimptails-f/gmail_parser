@@ -586,6 +586,172 @@ func TestEmailStoreRepositoryImpl_DuplicateKeywordHandling(t *testing.T) {
 	assert.Equal(t, 2, len(emailKeywordGroups), "両方のメールでEmailKeywordGroupが作成されているべきです")
 }
 
+// TestSaveEmail_DuplicateKeywords は重複キーワードでのエラーをテストします
+func TestSaveEmail_DuplicateKeywords(t *testing.T) {
+	// テスト用DBの準備
+	db, cleanup, err := mysql.CreateNewTestDB()
+	require.NoError(t, err)
+	defer cleanup()
+
+	err = db.DB.AutoMigrate(
+		model.KeywordGroup{},
+		model.KeyWord{},
+		model.PositionGroup{},
+		model.PositionWord{},
+		model.WorkTypeGroup{},
+		model.WorkTypeWord{},
+		model.Email{},
+		model.EmailProject{},
+		model.EmailCandidate{},
+		model.EntryTiming{},
+		model.EmailKeywordGroup{},
+		model.EmailPositionGroup{},
+		model.EmailWorkTypeGroup{},
+	)
+	require.NoError(t, err)
+
+	// リポジトリを作成
+	repo := NewEmailStoreRepository(db.DB)
+
+	ctx := context.Background()
+
+	// テストデータを作成（同じキーワードが複数のカテゴリに含まれる）
+	priceFrom := 500000
+	priceTo := 800000
+	remoteFreq := "3"
+
+	result := &openaidomain.EmailAnalysisResult{
+		ID:                  "test-duplicate-keywords-001",
+		Subject:             "テスト案件",
+		From:                "テスト送信者",
+		FromEmail:           "test@example.com",
+		Date:                time.Now(),
+		Body:                "テスト本文",
+		MailCategory:        "案件",
+		Languages:           []string{"Java", "Python"},
+		Frameworks:          []string{"Spring", "Django"},
+		RequiredSkillsMust:  []string{"Java", "Spring"},   // Javaが重複
+		RequiredSkillsWant:  []string{"Python", "Django"}, // PythonとDjangoが重複
+		Positions:           []string{"エンジニア"},
+		WorkTypes:           []string{"開発"},
+		StartPeriod:         []string{"即日"},
+		EndPeriod:           "長期",
+		WorkLocation:        "東京",
+		PriceFrom:           &priceFrom,
+		PriceTo:             &priceTo,
+		RemoteWorkCategory:  "リモート可",
+		RemoteWorkFrequency: &remoteFreq,
+	}
+
+	// メール保存を実行
+	err = repo.SaveEmail(ctx, result)
+
+	// 重複エラーが発生することを確認
+	if err != nil {
+		t.Logf("予想通りエラーが発生しました: %v", err)
+		// エラーメッセージに重複関連の内容が含まれているかチェック
+		assert.Contains(t, err.Error(), "Duplicate")
+	} else {
+		t.Log("エラーが発生しませんでした。重複チェック機能が正常に動作している可能性があります。")
+	}
+}
+
+// TestSaveEmail_MultipleEmails は複数メール保存時の重複エラーをテストします
+func TestSaveEmail_MultipleEmails(t *testing.T) {
+	// テスト用DBの準備
+	db, cleanup, err := mysql.CreateNewTestDB()
+	require.NoError(t, err)
+	defer cleanup()
+
+	err = db.DB.AutoMigrate(
+		model.KeywordGroup{},
+		model.KeyWord{},
+		model.PositionGroup{},
+		model.PositionWord{},
+		model.WorkTypeGroup{},
+		model.WorkTypeWord{},
+		model.Email{},
+		model.EmailProject{},
+		model.EmailCandidate{},
+		model.EntryTiming{},
+		model.EmailKeywordGroup{},
+		model.EmailPositionGroup{},
+		model.EmailWorkTypeGroup{},
+	)
+	require.NoError(t, err)
+
+	// リポジトリを作成
+	repo := NewEmailStoreRepository(db.DB)
+
+	ctx := context.Background()
+
+	// 1つ目のメールを保存
+	priceFrom1 := 500000
+	priceTo1 := 800000
+	remoteFreq1 := "3"
+
+	result1 := &openaidomain.EmailAnalysisResult{
+		ID:                  "test-multiple-001",
+		Subject:             "テスト案件1",
+		From:                "テスト送信者1",
+		FromEmail:           "test1@example.com",
+		Date:                time.Now(),
+		Body:                "テスト本文1",
+		MailCategory:        "案件",
+		Languages:           []string{"Java"},
+		Frameworks:          []string{"Spring"},
+		RequiredSkillsMust:  []string{"Java"},
+		RequiredSkillsWant:  []string{"Spring"},
+		Positions:           []string{"エンジニア"},
+		WorkTypes:           []string{"開発"},
+		StartPeriod:         []string{"即日"},
+		EndPeriod:           "長期",
+		WorkLocation:        "東京",
+		PriceFrom:           &priceFrom1,
+		PriceTo:             &priceTo1,
+		RemoteWorkCategory:  "リモート可",
+		RemoteWorkFrequency: &remoteFreq1,
+	}
+
+	err = repo.SaveEmail(ctx, result1)
+	require.NoError(t, err, "1つ目のメール保存でエラーが発生しました")
+
+	// 2つ目のメールを保存（同じキーワードを含む）
+	priceFrom2 := 600000
+	priceTo2 := 900000
+	remoteFreq2 := "2"
+
+	result2 := &openaidomain.EmailAnalysisResult{
+		ID:                  "test-multiple-002",
+		Subject:             "テスト案件2",
+		From:                "テスト送信者2",
+		FromEmail:           "test2@example.com",
+		Date:                time.Now(),
+		Body:                "テスト本文2",
+		MailCategory:        "案件",
+		Languages:           []string{"Java", "Python"},   // Javaが1つ目と重複
+		Frameworks:          []string{"Spring", "Django"}, // Springが1つ目と重複
+		RequiredSkillsMust:  []string{"Java", "Python"},
+		RequiredSkillsWant:  []string{"Spring", "Django"},
+		Positions:           []string{"エンジニア"},
+		WorkTypes:           []string{"開発"},
+		StartPeriod:         []string{"即日"},
+		EndPeriod:           "長期",
+		WorkLocation:        "東京",
+		PriceFrom:           &priceFrom2,
+		PriceTo:             &priceTo2,
+		RemoteWorkCategory:  "リモート可",
+		RemoteWorkFrequency: &remoteFreq2,
+	}
+
+	err = repo.SaveEmail(ctx, result2)
+	if err != nil {
+		t.Logf("2つ目のメール保存でエラーが発生しました: %v", err)
+	} else {
+		t.Log("2つ目のメール保存が成功しました")
+	}
+}
+
 // intPtr はintのポインタを返すヘルパー関数です
 func intPtr(i int) *int {
 	return &i

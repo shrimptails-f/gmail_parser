@@ -97,10 +97,10 @@ type KeyWord struct {
 
 // EmailKeywordGroup はEmailとKeywordGroupの多対多中間テーブルを表すドメインモデルです
 type EmailKeywordGroup struct {
-	EmailID        string    `gorm:"primaryKey;size:32" json:"email_id"`                                // メールID
-	KeywordGroupID uint      `gorm:"primaryKey" json:"keyword_group_id"`                                // キーワードグループID
-	Type           string    `gorm:"type:enum('MUST','WANT','LANGUAGE','FRAMEWORK');index" json:"type"` // スキル種別
-	CreatedAt      time.Time `json:"created_at"`                                                        // 登録日時
+	EmailID        string    `gorm:"primaryKey;size:32" json:"email_id"`                                           // メールID
+	KeywordGroupID uint      `gorm:"primaryKey" json:"keyword_group_id"`                                           // キーワードグループID
+	Type           string    `gorm:"primaryKey;type:enum('MUST','WANT','LANGUAGE','FRAMEWORK');index" json:"type"` // スキル種別
+	CreatedAt      time.Time `json:"created_at"`                                                                   // 登録日時
 
 	// リレーション
 	Email Email `gorm:"foreignKey:EmailID;references:ID" json:"email"`
