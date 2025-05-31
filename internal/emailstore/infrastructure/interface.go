@@ -18,4 +18,13 @@ type EmailStoreRepository interface {
 
 	// EmailExists はメールが既に存在するかチェックします
 	EmailExists(ctx context.Context, id string) (bool, error)
+
+	// KeywordExists はキーワードが既に存在するかチェックします
+	KeywordExists(ctx context.Context, word string) (bool, error)
+
+	// PositionExists はポジションが既に存在するかチェックします
+	PositionExists(ctx context.Context, word string) (bool, error)
+
+	// WorkTypeExists は業務種別が既に存在するかチェックします
+	WorkTypeExists(ctx context.Context, word string) (bool, error)
 }

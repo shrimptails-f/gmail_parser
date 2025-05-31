@@ -336,6 +336,256 @@ func TestEmailStoreRepositoryImpl_EmailExists(t *testing.T) {
 	}
 }
 
+func TestEmailStoreRepositoryImpl_KeywordExists(t *testing.T) {
+	// テスト用DBの準備
+	db, cleanup, err := mysql.CreateNewTestDB()
+	require.NoError(t, err)
+	defer cleanup()
+
+	// テーブル作成
+	err = db.DB.AutoMigrate(
+		model.KeywordGroup{},
+		model.KeyWord{},
+	)
+	require.NoError(t, err)
+
+	repo := NewEmailStoreRepository(db.DB)
+	ctx := context.Background()
+
+	// テストデータの準備
+	keywordGroup := &domain.KeywordGroup{
+		Name: "Go",
+		Type: "language",
+	}
+	db.DB.Create(keywordGroup)
+
+	keyWord := &domain.KeyWord{
+		KeywordGroupID: keywordGroup.KeywordGroupID,
+		Word:           "Go",
+	}
+	db.DB.Create(keyWord)
+
+	tests := []struct {
+		name     string
+		word     string
+		expected bool
+	}{
+		{
+			name:     "正常系_キーワード存在",
+			word:     "Go",
+			expected: true,
+		},
+		{
+			name:     "正常系_キーワード存在しない",
+			word:     "Java",
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act
+			exists, err := repo.KeywordExists(ctx, tt.word)
+
+			// Assert
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, exists)
+		})
+	}
+}
+
+func TestEmailStoreRepositoryImpl_PositionExists(t *testing.T) {
+	// テスト用DBの準備
+	db, cleanup, err := mysql.CreateNewTestDB()
+	require.NoError(t, err)
+	defer cleanup()
+
+	// テーブル作成
+	err = db.DB.AutoMigrate(
+		model.PositionGroup{},
+		model.PositionWord{},
+	)
+	require.NoError(t, err)
+
+	repo := NewEmailStoreRepository(db.DB)
+	ctx := context.Background()
+
+	// テストデータの準備
+	positionGroup := &domain.PositionGroup{
+		Name: "PM",
+	}
+	db.DB.Create(positionGroup)
+
+	positionWord := &domain.PositionWord{
+		PositionGroupID: positionGroup.PositionGroupID,
+		Word:            "PM",
+	}
+	db.DB.Create(positionWord)
+
+	tests := []struct {
+		name     string
+		word     string
+		expected bool
+	}{
+		{
+			name:     "正常系_ポジション存在",
+			word:     "PM",
+			expected: true,
+		},
+		{
+			name:     "正常系_ポジション存在しない",
+			word:     "SE",
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act
+			exists, err := repo.PositionExists(ctx, tt.word)
+
+			// Assert
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, exists)
+		})
+	}
+}
+
+func TestEmailStoreRepositoryImpl_WorkTypeExists(t *testing.T) {
+	// テスト用DBの準備
+	db, cleanup, err := mysql.CreateNewTestDB()
+	require.NoError(t, err)
+	defer cleanup()
+
+	// テーブル作成
+	err = db.DB.AutoMigrate(
+		model.WorkTypeGroup{},
+		model.WorkTypeWord{},
+	)
+	require.NoError(t, err)
+
+	repo := NewEmailStoreRepository(db.DB)
+	ctx := context.Background()
+
+	// テストデータの準備
+	workTypeGroup := &domain.WorkTypeGroup{
+		Name: "バックエンド開発",
+	}
+	db.DB.Create(workTypeGroup)
+
+	workTypeWord := &domain.WorkTypeWord{
+		WorkTypeGroupID: workTypeGroup.WorkTypeGroupID,
+		Word:            "バックエンド開発",
+	}
+	db.DB.Create(workTypeWord)
+
+	tests := []struct {
+		name     string
+		word     string
+		expected bool
+	}{
+		{
+			name:     "正常系_業務種別存在",
+			word:     "バックエンド開発",
+			expected: true,
+		},
+		{
+			name:     "正常系_業務種別存在しない",
+			word:     "フロントエンド開発",
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act
+			exists, err := repo.WorkTypeExists(ctx, tt.word)
+
+			// Assert
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, exists)
+		})
+	}
+}
+
+func TestEmailStoreRepositoryImpl_DuplicateKeywordHandling(t *testing.T) {
+	// テスト用DBの準備
+	db, cleanup, err := mysql.CreateNewTestDB()
+	require.NoError(t, err)
+	defer cleanup()
+
+	// テーブル作成
+	err = db.DB.AutoMigrate(
+		model.KeywordGroup{},
+		model.KeyWord{},
+		model.Email{},
+		model.EmailProject{},
+		model.EmailKeywordGroup{},
+	)
+	require.NoError(t, err)
+
+	repo := NewEmailStoreRepository(db.DB)
+	ctx := context.Background()
+
+	// 事前にキーワードを作成
+	keywordGroup := &domain.KeywordGroup{
+		Name: "Go",
+		Type: "language",
+	}
+	db.DB.Create(keywordGroup)
+
+	keyWord := &domain.KeyWord{
+		KeywordGroupID: keywordGroup.KeywordGroupID,
+		Word:           "Go",
+	}
+	db.DB.Create(keyWord)
+
+	// 1回目のメール保存（新規作成）
+	firstEmail := &openaidomain.EmailAnalysisResult{
+		ID:           "test-email-1",
+		Subject:      "テスト1",
+		From:         "test1@example.com",
+		FromEmail:    "test1@example.com",
+		Date:         time.Now(),
+		Body:         "テスト本文1",
+		MailCategory: "案件",
+		Languages:    []string{"Go"},
+	}
+
+	err = repo.SaveEmail(ctx, firstEmail)
+	assert.NoError(t, err)
+
+	// 2回目のメール保存（既存キーワードを使用）
+	secondEmail := &openaidomain.EmailAnalysisResult{
+		ID:           "test-email-2",
+		Subject:      "テスト2",
+		From:         "test2@example.com",
+		FromEmail:    "test2@example.com",
+		Date:         time.Now(),
+		Body:         "テスト本文2",
+		MailCategory: "案件",
+		Languages:    []string{"Go"}, // 既存のキーワード
+	}
+
+	err = repo.SaveEmail(ctx, secondEmail)
+	assert.NoError(t, err)
+
+	// KeywordGroupが重複作成されていないことを確認
+	var keywordGroups []domain.KeywordGroup
+	db.DB.Where("name = ?", "Go").Find(&keywordGroups)
+	assert.Equal(t, 1, len(keywordGroups), "KeywordGroupが重複作成されてはいけません")
+
+	// KeyWordが重複作成されていないことを確認
+	var keyWords []domain.KeyWord
+	db.DB.Where("word = ?", "Go").Find(&keyWords)
+	assert.Equal(t, 1, len(keyWords), "KeyWordが重複作成されてはいけません")
+
+	// 両方のメールでEmailKeywordGroupが作成されていることを確認
+	var emailKeywordGroups []domain.EmailKeywordGroup
+	db.DB.Where("keyword_group_id = ?", keywordGroup.KeywordGroupID).Find(&emailKeywordGroups)
+	assert.Equal(t, 2, len(emailKeywordGroups), "両方のメールでEmailKeywordGroupが作成されているべきです")
+}
+
 // intPtr はintのポインタを返すヘルパー関数です
 func intPtr(i int) *int {
 	return &i
