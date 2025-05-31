@@ -13,87 +13,87 @@ func CreateEmailWorkTypeGroup(tx *gorm.DB) error {
 	emailWorkTypeGroups := []model.EmailWorkTypeGroup{
 		// email001 (Java案件) の関連
 		{
-			EmailID:         "email001",
+			EmailID:         1,
 			WorkTypeGroupID: 2, // 基本設計
 		},
 		{
-			EmailID:         "email001",
+			EmailID:         1,
 			WorkTypeGroupID: 3, // 詳細設計
 		},
 		{
-			EmailID:         "email001",
+			EmailID:         1,
 			WorkTypeGroupID: 5, // バックエンド開発
 		},
 		{
-			EmailID:         "email001",
+			EmailID:         1,
 			WorkTypeGroupID: 10, // 単体テスト
 		},
 		// email002 (React案件) の関連
 		{
-			EmailID:         "email002",
+			EmailID:         2,
 			WorkTypeGroupID: 3, // 詳細設計
 		},
 		{
-			EmailID:         "email002",
+			EmailID:         2,
 			WorkTypeGroupID: 4, // フロントエンド開発
 		},
 		{
-			EmailID:         "email002",
+			EmailID:         2,
 			WorkTypeGroupID: 19, // コードレビュー
 		},
 		// email003 (Python機械学習案件) の関連
 		{
-			EmailID:         "email003",
+			EmailID:         3,
 			WorkTypeGroupID: 1, // 要件定義
 		},
 		{
-			EmailID:         "email003",
+			EmailID:         3,
 			WorkTypeGroupID: 2, // 基本設計
 		},
 		{
-			EmailID:         "email003",
+			EmailID:         3,
 			WorkTypeGroupID: 5, // バックエンド開発
 		},
 		{
-			EmailID:         "email003",
+			EmailID:         3,
 			WorkTypeGroupID: 7, // データベース設計
 		},
 		// email004 (Go案件) の関連
 		{
-			EmailID:         "email004",
+			EmailID:         4,
 			WorkTypeGroupID: 2, // 基本設計
 		},
 		{
-			EmailID:         "email004",
+			EmailID:         4,
 			WorkTypeGroupID: 5, // バックエンド開発
 		},
 		{
-			EmailID:         "email004",
+			EmailID:         4,
 			WorkTypeGroupID: 6, // API開発
 		},
 		{
-			EmailID:         "email004",
+			EmailID:         4,
 			WorkTypeGroupID: 8, // インフラ構築
 		},
 		// email005 (フルスタック案件) の関連
 		{
-			EmailID:         "email005",
+			EmailID:         5,
 			WorkTypeGroupID: 3, // 詳細設計
 		},
 		{
-			EmailID:         "email005",
+			EmailID:         5,
 			WorkTypeGroupID: 4, // フロントエンド開発
 		},
 		{
-			EmailID:         "email005",
+			EmailID:         5,
 			WorkTypeGroupID: 5, // バックエンド開発
 		},
 		{
-			EmailID:         "email005",
+			EmailID:         5,
 			WorkTypeGroupID: 6, // API開発
 		},
 		{
-			EmailID:         "email005",
+			EmailID:         5,
 			WorkTypeGroupID: 8, // インフラ構築
 		},
 	}

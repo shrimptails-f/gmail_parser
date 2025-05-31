@@ -14,7 +14,7 @@ type EmailStoreRepository interface {
 	SaveEmail(ctx context.Context, result *openaidomain.EmailAnalysisResult) error
 
 	// GetEmailByID はIDでメールを取得します
-	GetEmailByID(ctx context.Context, id string) (*domain.Email, error)
+	GetGmailByID(ctx context.Context, gmail_id uint) (*domain.Email, error)
 
 	// EmailExists はメールが既に存在するかチェックします
 	EmailExists(ctx context.Context, id string) (bool, error)

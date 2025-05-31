@@ -6,13 +6,14 @@ import (
 
 // Email（メール基本情報）
 type Email struct {
-	ID           string    `gorm:"primaryKey;size:32"` // メールID
-	Subject      string    `gorm:"type:text;not null"` // 件名
-	SenderName   string    `gorm:"size:255"`           // 差出人名
-	SenderEmail  string    `gorm:"size:255;index"`     // メールアドレス
-	ReceivedDate time.Time `gorm:"index"`              // 受信日
-	Body         *string   `gorm:"type:longtext"`      // 本文
-	Category     string    `gorm:"size:50;index"`      // 種別（案件 / 人材提案）
+	ID           uint      `gorm:"primaryKey;autoIncrement"` // オートインクリメントID
+	GmailID      string    `gorm:"size:32;index"`            // GメールID
+	Subject      string    `gorm:"type:text;not null"`       // 件名
+	SenderName   string    `gorm:"size:255"`                 // 差出人名
+	SenderEmail  string    `gorm:"size:255;index"`           // メールアドレス
+	ReceivedDate time.Time `gorm:"index"`                    // 受信日
+	Body         *string   `gorm:"type:longtext"`            // 本文
+	Category     string    `gorm:"size:50;index"`            // 種別（案件 / 人材提案）
 
 	CreatedAt time.Time // 作成日時
 	UpdatedAt time.Time // 更新日時

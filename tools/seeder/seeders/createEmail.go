@@ -17,7 +17,7 @@ func CreateEmail(tx *gorm.DB) error {
 
 	emails := []model.Email{
 		{
-			ID:           "email001",
+			GmailID:      "email001",
 			Subject:      "【案件】Javaエンジニア募集（リモート可）",
 			SenderName:   "田中太郎",
 			SenderEmail:  "tanaka@example.com",
@@ -26,7 +26,7 @@ func CreateEmail(tx *gorm.DB) error {
 			Category:     "案件",
 			// 案件情報（EmailProject）
 			EmailProject: &model.EmailProject{
-				EmailID:         "email001",
+				EmailID:         1,
 				ProjectTitle:    stringPtr("ECサイト構築プロジェクト"),
 				EntryTiming:     stringPtr("2024/02/01,2024/03/01"),
 				Languages:       stringPtr("Java,JavaScript"),
@@ -43,13 +43,13 @@ func CreateEmail(tx *gorm.DB) error {
 				RemoteFrequency: stringPtr("週5日"),
 				// EntryTimingsリレーション
 				EntryTimings: []model.EntryTiming{
-					{EmailProjectID: "email001", StartDate: "2024/02/01"},
-					{EmailProjectID: "email001", StartDate: "2024/03/01"},
+					{EmailProjectID: 1, StartDate: "2024/02/01"},
+					{EmailProjectID: 1, StartDate: "2024/03/01"},
 				},
 			},
 		},
 		{
-			ID:           "email002",
+			GmailID:      "email002",
 			Subject:      "【人材提案】React開発経験者のご紹介",
 			SenderName:   "佐藤花子",
 			SenderEmail:  "sato@example.com",
@@ -58,7 +58,7 @@ func CreateEmail(tx *gorm.DB) error {
 			Category:     "人材提案",
 		},
 		{
-			ID:           "email003",
+			GmailID:      "email003",
 			Subject:      "【案件】Python機械学習エンジニア募集",
 			SenderName:   "山田次郎",
 			SenderEmail:  "yamada@example.com",
@@ -67,7 +67,7 @@ func CreateEmail(tx *gorm.DB) error {
 			Category:     "案件",
 			// 案件情報（EmailProject）
 			EmailProject: &model.EmailProject{
-				EmailID:         "email003",
+				EmailID:         3,
 				ProjectTitle:    stringPtr("AIチャットボット開発"),
 				EntryTiming:     stringPtr("2024/03/01,2024/04/01"),
 				Languages:       stringPtr("Python,SQL"),
@@ -84,13 +84,13 @@ func CreateEmail(tx *gorm.DB) error {
 				RemoteFrequency: stringPtr("週5日出社"),
 				// EntryTimingsリレーション
 				EntryTimings: []model.EntryTiming{
-					{EmailProjectID: "email003", StartDate: "2024/03/01"},
-					{EmailProjectID: "email003", StartDate: "2024/04/01"},
+					{EmailProjectID: 3, StartDate: "2024/03/01"},
+					{EmailProjectID: 3, StartDate: "2024/04/01"},
 				},
 			},
 		},
 		{
-			ID:           "email004",
+			GmailID:      "email004",
 			Subject:      "【案件】Go言語バックエンド開発者募集",
 			SenderName:   "鈴木一郎",
 			SenderEmail:  "suzuki@example.com",
@@ -99,7 +99,7 @@ func CreateEmail(tx *gorm.DB) error {
 			Category:     "案件",
 			// 案件情報（EmailProject）
 			EmailProject: &model.EmailProject{
-				EmailID:         "email004",
+				EmailID:         4,
 				ProjectTitle:    stringPtr("マイクロサービス基盤構築"),
 				EntryTiming:     stringPtr("2024/04/01,2024/05/01"),
 				Languages:       stringPtr("Go,SQL"),
@@ -116,13 +116,13 @@ func CreateEmail(tx *gorm.DB) error {
 				RemoteFrequency: stringPtr("完全リモート"),
 				// EntryTimingsリレーション
 				EntryTimings: []model.EntryTiming{
-					{EmailProjectID: "email004", StartDate: "2024/04/01"},
-					{EmailProjectID: "email004", StartDate: "2024/05/01"},
+					{EmailProjectID: 4, StartDate: "2024/04/01"},
+					{EmailProjectID: 4, StartDate: "2024/05/01"},
 				},
 			},
 		},
 		{
-			ID:           "email005",
+			GmailID:      "email005",
 			Subject:      "【人材提案】フルスタックエンジニアのご紹介",
 			SenderName:   "高橋美咲",
 			SenderEmail:  "takahashi@example.com",

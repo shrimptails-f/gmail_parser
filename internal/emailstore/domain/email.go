@@ -9,7 +9,8 @@ import (
 
 // Email は全メール共通の基本情報を表すドメインモデルです
 type Email struct {
-	ID           string    `gorm:"primaryKey;size:32" json:"id"`       // メールID
+	ID           uint      `gorm:"primaryKey;autoIncrement"`           // オートインクリメントID
+	GmailID      string    `gorm:"size:32;index"`                      // GメールID
 	Subject      string    `gorm:"type:text;not null" json:"subject"`  // 件名
 	SenderName   string    `gorm:"size:255" json:"sender_name"`        // 差出人名
 	SenderEmail  string    `gorm:"size:255;index" json:"sender_email"` // メールアドレス

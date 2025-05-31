@@ -265,7 +265,7 @@ func TestEmailStoreRepositoryImpl_GetEmailByID(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Act
-			email, err := repo.GetEmailByID(ctx, tt.emailID)
+			email, err := repo.GetEmailByID(ctx, tt.Id)
 
 			// Assert
 			if tt.expectedError == "" {

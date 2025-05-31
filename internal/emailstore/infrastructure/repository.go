@@ -422,9 +422,9 @@ func (r *EmailStoreRepositoryImpl) getOrCreateWorkTypeGroup(tx *gorm.DB, name st
 }
 
 // GetEmailByID はIDでメールを取得します
-func (r *EmailStoreRepositoryImpl) GetEmailByID(ctx context.Context, id string) (*domain.Email, error) {
+func (r *EmailStoreRepositoryImpl) GetGmailByID(ctx context.Context, gmail_id uint) (*domain.Email, error) {
 	var email domain.Email
-	err := r.db.Where("id = ?", id).First(&email).Error
+	err := r.db.Where("gmail_id = ?", gmail_id).First(&email).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, domain.ErrEmailNotFound
