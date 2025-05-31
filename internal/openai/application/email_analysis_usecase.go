@@ -5,6 +5,7 @@ package application
 import (
 	authdomain "business/internal/gmail/domain"
 	"business/internal/openai/domain"
+	r "business/internal/openai/infrastructure"
 	"context"
 	"fmt"
 	"strings"
@@ -12,11 +13,11 @@ import (
 
 // EmailAnalysisUseCaseImpl はメール分析のユースケース実装です
 type EmailAnalysisUseCaseImpl struct {
-	emailAnalysisService EmailAnalysisService
+	emailAnalysisService r.EmailAnalysisService
 }
 
 // NewEmailAnalysisUseCase はメール分析ユースケースを作成します
-func NewEmailAnalysisUseCase(emailAnalysisService EmailAnalysisService) EmailAnalysisUseCase {
+func NewEmailAnalysisUseCase(emailAnalysisService r.EmailAnalysisService) EmailAnalysisUseCase {
 	return &EmailAnalysisUseCaseImpl{
 		emailAnalysisService: emailAnalysisService,
 	}

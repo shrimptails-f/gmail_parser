@@ -359,9 +359,9 @@ func analyzeEmailMessage(ctx context.Context, message *domain.GmailMessage) erro
 	}
 
 	// 結果を表示
-	if err := emailAnalysisUseCase.DisplayEmailAnalysisResult(result); err != nil {
-		return fmt.Errorf("分析結果表示エラー: %w", err)
-	}
+	// if err := emailAnalysisUseCase.DisplayEmailAnalysisResult(result); err != nil {
+	// 	return fmt.Errorf("分析結果表示エラー: %w", err)
+	// }
 
 	// DB保存処理を実行
 	if err := saveEmailAnalysisResult(ctx, result); err != nil {

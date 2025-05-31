@@ -14,11 +14,6 @@ type EmailAnalysisUseCase interface {
 	DisplayEmailAnalysisResult(result *domain.EmailAnalysisResult) error
 }
 
-// EmailAnalysisService はメール分析サービスのインターフェースです
-type EmailAnalysisService interface {
-	AnalyzeEmail(ctx context.Context, request *domain.EmailAnalysisRequest) (*domain.EmailAnalysisResult, error)
-}
-
 // TextAnalysisUseCase はテキスト字句解析のユースケースインターフェースです
 type TextAnalysisUseCase interface {
 	AnalyzeText(ctx context.Context, text string) (*domain.TextAnalysisResult, error)
@@ -29,11 +24,4 @@ type TextAnalysisUseCase interface {
 // TextAnalysisService はテキスト字句解析サービスのインターフェースです
 type TextAnalysisService interface {
 	AnalyzeText(ctx context.Context, request *domain.TextAnalysisRequest) (*domain.TextAnalysisResult, error)
-}
-
-// PromptService はプロンプト管理サービスのインターフェースです
-type PromptService interface {
-	LoadPrompt(filename string) (string, error)
-	SavePrompt(filename, content string) error
-	ListPrompts() ([]string, error)
 }
