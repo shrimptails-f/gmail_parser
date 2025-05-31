@@ -16,7 +16,15 @@ tables:
 
   keyword_groups:
     role: "正規化された技術キーワードのマスタ（PHP、Reactなど）"
-    relation: ["key_words (1:N)", "email_keyword_groups (1:N)"]
+    relation: [key_words (1:N), email_projects (N:N via email_projects_keyword_groups)]
+  
+  email_projects_keyword_groups:
+    role: "email_projects と keyword_groups を多対多で結びつける中間テーブル"
+    relation: [email_projects (N:1), keyword_groups (N:1)]
+
+  key_words:
+    role: "キーワードの表記ゆれを keyword_groups に紐付ける"
+    relation: ["keyword_groups (N:1)"]
 
   key_words:
     role: "キーワードの表記ゆれを keyword_groups に紐付ける"

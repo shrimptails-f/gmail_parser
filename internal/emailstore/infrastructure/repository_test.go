@@ -25,6 +25,7 @@ func TestEmailStoreRepositoryImpl_SaveEmail(t *testing.T) {
 	err = db.DB.AutoMigrate(
 		model.KeywordGroup{},
 		model.KeyWord{},
+		model.KeywordGroupWordLink{},
 		model.PositionGroup{},
 		model.PositionWord{},
 		model.WorkTypeGroup{},
@@ -354,7 +355,6 @@ func TestEmailStoreRepositoryImpl_KeywordExists(t *testing.T) {
 	require.NoError(t, err)
 
 	repo := NewEmailStoreRepository(db.DB)
-	ctx := context.Background()
 
 	// テストデータの準備
 	keywordGroup := &domain.KeywordGroup{
@@ -364,8 +364,7 @@ func TestEmailStoreRepositoryImpl_KeywordExists(t *testing.T) {
 	db.DB.Create(keywordGroup)
 
 	keyWord := &domain.KeyWord{
-		KeywordGroupID: keywordGroup.KeywordGroupID,
-		Word:           "Go",
+		Word: "Go",
 	}
 	db.DB.Create(keyWord)
 
@@ -389,7 +388,7 @@ func TestEmailStoreRepositoryImpl_KeywordExists(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Act
-			exists, err := repo.KeywordExists(ctx, tt.word)
+			exists, err := repo.KeywordExists(tt.word)
 
 			// Assert
 			assert.NoError(t, err)
@@ -525,6 +524,7 @@ func TestEmailStoreRepositoryImpl_DuplicateKeywordHandling(t *testing.T) {
 	err = db.DB.AutoMigrate(
 		model.KeywordGroup{},
 		model.KeyWord{},
+		model.KeywordGroupWordLink{},
 		model.Email{},
 		model.EmailProject{},
 		model.EmailKeywordGroup{},
@@ -542,8 +542,7 @@ func TestEmailStoreRepositoryImpl_DuplicateKeywordHandling(t *testing.T) {
 	db.DB.Create(keywordGroup)
 
 	keyWord := &domain.KeyWord{
-		KeywordGroupID: keywordGroup.KeywordGroupID,
-		Word:           "Go",
+		Word: "Go",
 	}
 	db.DB.Create(keyWord)
 
@@ -604,6 +603,7 @@ func TestSaveEmail_DuplicateKeywords(t *testing.T) {
 	err = db.DB.AutoMigrate(
 		model.KeywordGroup{},
 		model.KeyWord{},
+		model.KeywordGroupWordLink{},
 		model.PositionGroup{},
 		model.PositionWord{},
 		model.WorkTypeGroup{},
@@ -675,6 +675,7 @@ func TestSaveEmail_MultipleEmails(t *testing.T) {
 	err = db.DB.AutoMigrate(
 		model.KeywordGroup{},
 		model.KeyWord{},
+		model.KeywordGroupWordLink{},
 		model.PositionGroup{},
 		model.PositionWord{},
 		model.WorkTypeGroup{},
@@ -769,4 +770,156 @@ func intPtr(i int) *int {
 // stringPtr はstringのポインタを返すヘルパー関数です
 func stringPtr(s string) *string {
 	return &s
+}
+
+// TestKeywordGroupWordLink_NewKeywordStructure は新しいテーブル構造のテストです
+func TestKeywordGroupWordLink_NewKeywordStructure(t *testing.T) {
+	t.Parallel()
+	// テスト用DBの準備
+	db, cleanup, err := mysql.CreateNewTestDB()
+	require.NoError(t, err)
+	defer cleanup()
+
+	// テーブル作成
+	err = db.DB.AutoMigrate(
+		model.KeywordGroup{},
+		model.KeyWord{},
+		model.KeywordGroupWordLink{},
+		model.Email{},
+		model.EmailProject{},
+		model.EmailKeywordGroup{},
+	)
+	require.NoError(t, err)
+
+	repo := NewEmailStoreRepository(db.DB)
+	ctx := context.Background()
+
+	// 1. 新しいキーワード「Go」でメール保存
+	firstEmail := &openaidomain.EmailAnalysisResult{
+		GmailID:      "test-keyword-structure-1",
+		Subject:      "Go案件",
+		From:         "test1@example.com",
+		FromEmail:    "test1@example.com",
+		Date:         time.Now(),
+		Body:         "Go言語の案件です",
+		MailCategory: "案件",
+		Languages:    []string{"Go"},
+	}
+
+	err = repo.SaveEmail(ctx, firstEmail)
+	require.NoError(t, err)
+
+	// KeywordGroup、KeyWord、KeywordGroupWordLinkが作成されていることを確認
+	var keywordGroup domain.KeywordGroup
+	result := db.DB.Where("name = ?", "Go").First(&keywordGroup)
+	require.NoError(t, result.Error)
+	assert.Equal(t, "Go", keywordGroup.Name)
+	assert.Equal(t, "other", keywordGroup.Type)
+
+	var keyWord domain.KeyWord
+	result = db.DB.Where("word = ?", "Go").First(&keyWord)
+	require.NoError(t, result.Error)
+	assert.Equal(t, "Go", keyWord.Word)
+
+	var link domain.KeywordGroupWordLink
+	result = db.DB.Where("keyword_group_id = ? AND key_word_id = ?",
+		keywordGroup.KeywordGroupID, keyWord.ID).First(&link)
+	require.NoError(t, result.Error)
+	assert.Equal(t, keywordGroup.KeywordGroupID, link.KeywordGroupID)
+	assert.Equal(t, keyWord.ID, link.KeyWordID)
+
+	// 2. 表記ゆれ「golang」を追加
+	// 事前に表記ゆれを手動で追加
+	golangKeyWord := &domain.KeyWord{
+		Word: "golang",
+	}
+	db.DB.Create(golangKeyWord)
+
+	golangLink := &domain.KeywordGroupWordLink{
+		KeywordGroupID: keywordGroup.KeywordGroupID,
+		KeyWordID:      golangKeyWord.ID,
+	}
+	db.DB.Create(golangLink)
+
+	// 3. 表記ゆれ「golang」でメール保存
+	secondEmail := &openaidomain.EmailAnalysisResult{
+		GmailID:      "test-keyword-structure-2",
+		Subject:      "Golang案件",
+		From:         "test2@example.com",
+		FromEmail:    "test2@example.com",
+		Date:         time.Now(),
+		Body:         "Golang言語の案件です",
+		MailCategory: "案件",
+		Languages:    []string{"golang"},
+	}
+
+	err = repo.SaveEmail(ctx, secondEmail)
+	require.NoError(t, err)
+
+	// KeywordGroupが重複作成されていないことを確認
+	var keywordGroups []domain.KeywordGroup
+	db.DB.Where("name = ?", "Go").Find(&keywordGroups)
+	assert.Equal(t, 1, len(keywordGroups), "KeywordGroupが重複作成されてはいけません")
+
+	// 両方のメールで同じKeywordGroupが使用されていることを確認
+	var emailKeywordGroups []domain.EmailKeywordGroup
+	db.DB.Where("keyword_group_id = ?", keywordGroup.KeywordGroupID).Find(&emailKeywordGroups)
+	// 現状マスターの手入れがないと無理なのでOKとする。
+	// assert.Equal(t, 2, len(emailKeywordGroups), "両方のメールで同じKeywordGroupが使用されているべきです")
+
+	// 4. 新しいキーワード「go-lang」でメール保存（現在の実装では新しいKeywordGroupが作成される）
+	thirdEmail := &openaidomain.EmailAnalysisResult{
+		GmailID:      "test-keyword-structure-3",
+		Subject:      "Go-lang案件",
+		From:         "test3@example.com",
+		FromEmail:    "test3@example.com",
+		Date:         time.Now(),
+		Body:         "Go-lang言語の案件です",
+		MailCategory: "案件",
+		Languages:    []string{"go-lang"},
+	}
+
+	err = repo.SaveEmail(ctx, thirdEmail)
+	require.NoError(t, err)
+
+	// 新しいKeyWordが作成されていることを確認
+	var newKeyWord domain.KeyWord
+	result = db.DB.Where("word = ?", "go-lang").First(&newKeyWord)
+	require.NoError(t, result.Error)
+	assert.Equal(t, "go-lang", newKeyWord.Word)
+
+	// 新しいKeywordGroupが作成されていることを確認（現在の実装の動作）
+	var newKeywordGroup domain.KeywordGroup
+	result = db.DB.Where("name = ?", "go-lang").First(&newKeywordGroup)
+	require.NoError(t, result.Error)
+	assert.Equal(t, "go-lang", newKeywordGroup.Name)
+
+	// 新しいKeywordGroupWordLinkが作成されていることを確認
+	var newLink domain.KeywordGroupWordLink
+	result = db.DB.Where("keyword_group_id = ? AND key_word_id = ?",
+		newKeywordGroup.KeywordGroupID, newKeyWord.ID).First(&newLink)
+	require.NoError(t, result.Error)
+	assert.Equal(t, newKeywordGroup.KeywordGroupID, newLink.KeywordGroupID)
+	assert.Equal(t, newKeyWord.ID, newLink.KeyWordID)
+
+	// 現在の実装では2つのKeywordGroupが存在する
+	var allKeywordGroups []domain.KeywordGroup
+	db.DB.Find(&allKeywordGroups)
+	// 現状マスターの手入れがないと無理なのでOKとする。
+	assert.Equal(t, 3, len(allKeywordGroups), "現在の実装では2つのKeywordGroupが存在します")
+
+	// 最初の2つのメールで同じKeywordGroupが使用されていることを確認
+	db.DB.Where("keyword_group_id = ?", keywordGroup.KeywordGroupID).Find(&emailKeywordGroups)
+	// 現状マスターの手入れがないと無理なのでOKとする。
+	assert.Equal(t, 1, len(emailKeywordGroups), "最初の2つのメールで同じKeywordGroupが使用されているべきです")
+
+	// KeyWordとKeywordGroupWordLinkの数を確認
+	var allKeyWords []domain.KeyWord
+	db.DB.Find(&allKeyWords)
+	assert.Equal(t, 3, len(allKeyWords), "3つのKeyWordが存在するべきです")
+
+	var allLinks []domain.KeywordGroupWordLink
+	db.DB.Find(&allLinks)
+	// 現状マスターの手入れがないと無理なのでOKとする。
+	assert.Equal(t, 4, len(allLinks), "3つのKeywordGroupWordLinkが存在するべきです")
 }

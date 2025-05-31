@@ -430,13 +430,47 @@ func (r *EmailStoreRepositoryImpl) saveKeywordsByType(tx *gorm.DB, emailID uint,
 	return nil
 }
 
-// getOrCreateKeywordGroup はKeywordGroupを取得または作成します
 func (r *EmailStoreRepositoryImpl) getOrCreateKeywordGroup(tx *gorm.DB, name string) (*domain.KeywordGroup, error) {
 	var keywordGroup domain.KeywordGroup
+	var keyWord domain.KeyWord
 
-	// 既存のKeywordGroupを検索
-	err := tx.Where("name = ?", name).First(&keywordGroup).Error
+	// 単語を先に取得（存在確認）
+	err := tx.Where("word = ?", name).First(&keyWord).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, fmt.Errorf("KeyWord検索エラー: %w", err)
+	}
+
+	// グループ存在確認
+	err = tx.Where("name = ?", name).First(&keywordGroup).Error
 	if err == nil {
+		// 存在する場合 → Linkの存在確認
+		if keyWord.ID == 0 {
+			// 単語がなければ作成
+			keyWord = domain.KeyWord{Word: name}
+			if err := tx.Create(&keyWord).Error; err != nil {
+				return nil, fmt.Errorf("KeyWord作成エラー: %w", err)
+			}
+		}
+
+		// 中間テーブルが存在するかチェック
+		var count int64
+		err = tx.Model(&domain.KeywordGroupWordLink{}).
+			Where("keyword_group_id = ? AND key_word_id = ?", keywordGroup.KeywordGroupID, keyWord.ID).
+			Count(&count).Error
+		if err != nil {
+			return nil, fmt.Errorf("KeywordGroupWordLink確認エラー: %w", err)
+		}
+
+		if count == 0 {
+			link := &domain.KeywordGroupWordLink{
+				KeywordGroupID: keywordGroup.KeywordGroupID,
+				KeyWordID:      keyWord.ID,
+			}
+			if err := tx.Create(link).Error; err != nil {
+				return nil, fmt.Errorf("KeywordGroupWordLink作成エラー: %w", err)
+			}
+		}
+
 		return &keywordGroup, nil
 	}
 
@@ -444,40 +478,28 @@ func (r *EmailStoreRepositoryImpl) getOrCreateKeywordGroup(tx *gorm.DB, name str
 		return nil, fmt.Errorf("KeywordGroup検索エラー: %w", err)
 	}
 
-	// 表記ゆれとして既に存在するかチェック
-	var existingKeyWord domain.KeyWord
-	err = tx.Where("word = ?", name).First(&existingKeyWord).Error
-	if err == nil {
-		// 既存の表記ゆれが見つかった場合、対応するKeywordGroupを取得
-		err = tx.Where("keyword_group_id = ?", existingKeyWord.KeywordGroupID).First(&keywordGroup).Error
-		if err != nil {
-			return nil, fmt.Errorf("既存KeywordGroup取得エラー: %w", err)
-		}
-		return &keywordGroup, nil
-	}
-
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, fmt.Errorf("KeyWord検索エラー: %w", err)
-	}
-
-	// 新規作成
+	// グループも単語も存在しない → 新規作成
 	keywordGroup = domain.KeywordGroup{
 		Name: name,
-		Type: "other", // デフォルトでotherに設定
+		Type: "other",
 	}
-
 	if err := tx.Create(&keywordGroup).Error; err != nil {
 		return nil, fmt.Errorf("KeywordGroup作成エラー: %w", err)
 	}
 
-	// KeyWordも作成（表記ゆれとして同じ名前を登録）
-	keyWord := &domain.KeyWord{
-		KeywordGroupID: keywordGroup.KeywordGroupID,
-		Word:           name,
+	if keyWord.ID == 0 {
+		keyWord = domain.KeyWord{Word: name}
+		if err := tx.Create(&keyWord).Error; err != nil {
+			return nil, fmt.Errorf("KeyWord作成エラー: %w", err)
+		}
 	}
 
-	if err := tx.Create(keyWord).Error; err != nil {
-		return nil, fmt.Errorf("KeyWord作成エラー: %w", err)
+	link := &domain.KeywordGroupWordLink{
+		KeywordGroupID: keywordGroup.KeywordGroupID,
+		KeyWordID:      keyWord.ID,
+	}
+	if err := tx.Create(link).Error; err != nil {
+		return nil, fmt.Errorf("KeywordGroupWordLink作成エラー: %w", err)
 	}
 
 	return &keywordGroup, nil
@@ -663,7 +685,7 @@ func (r *EmailStoreRepositoryImpl) EmailExists(ctx context.Context, id string) (
 }
 
 // KeywordExists はキーワードが既に存在するかチェックします
-func (r *EmailStoreRepositoryImpl) KeywordExists(ctx context.Context, word string) (bool, error) {
+func (r *EmailStoreRepositoryImpl) KeywordExists(word string) (bool, error) {
 	var count int64
 	err := r.db.Model(&domain.KeyWord{}).Where("word = ?", word).Count(&count).Error
 	if err != nil {

@@ -64,6 +64,9 @@ func Seed(tx *gorm.DB) error {
 	var err error
 	// メール関連のシーダー（依存関係順に実行）
 	// 1. マスタデータ
+	if err = seeders.CreateKeywordGroupWordLink(tx); err != nil {
+		return err
+	}
 	if err = seeders.CreateKeywordGroup(tx); err != nil {
 		return err
 	}

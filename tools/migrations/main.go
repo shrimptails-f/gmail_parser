@@ -70,6 +70,7 @@ func CreateArrayMigrationSlice() []interface{} {
 	return []interface{}{
 		model.KeywordGroup{},
 		model.KeyWord{},
+		model.KeywordGroupWordLink{},
 		model.PositionGroup{},
 		model.PositionWord{},
 		model.WorkTypeGroup{},
