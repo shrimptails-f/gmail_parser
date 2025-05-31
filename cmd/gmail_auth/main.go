@@ -263,9 +263,8 @@ func getGmailMessagesByLabel(ctx context.Context, l *logger.Logger, labelPath st
 	gmailMessageService := infrastructure.NewGmailMessageService()
 	gmailMessageUseCase := application.NewGmailMessageUseCase(gmailAuthService, gmailMessageService)
 
-	// ラベル指定でメッセージ一覧を取得（最大5件）
-	// TODO: ここは一旦1件にしておく。
-	messages, err := gmailMessageUseCase.GetMessagesByLabelPath(ctx, *config, labelPath, 1)
+	// ラベル指定で当日0時以降のメッセージを全件取得
+	messages, err := gmailMessageUseCase.GetAllMessagesByLabelPathFromToday(ctx, *config, labelPath, 50)
 	if err != nil {
 		return fmt.Errorf("ラベル指定メッセージ一覧の取得に失敗しました: %w", err)
 	}

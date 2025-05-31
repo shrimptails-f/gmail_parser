@@ -240,6 +240,83 @@ func (s *gmailMessageService) extractBody(payload *gmail.MessagePart) string {
 	return ""
 }
 
+// GetMessagesByLabelWithPagination は指定されたラベルのメッセージ一覧をページネーションで取得します
+func (s *gmailMessageService) GetMessagesByLabelWithPagination(ctx context.Context, credential domain.GmailCredential, applicationName string, labelID string, maxResults int64, pageToken string) ([]domain.GmailMessage, string, error) {
+	// Gmail APIサービスを作成
+	service, err := s.createGmailService(ctx, credential, applicationName)
+	if err != nil {
+		return nil, "", fmt.Errorf("Gmail APIサービスの作成に失敗しました: %w", err)
+	}
+
+	// 指定されたラベルのメッセージ一覧を取得
+	call := service.Users.Messages.List("me").MaxResults(maxResults)
+	if labelID != "" {
+		call = call.LabelIds(labelID)
+	}
+	if pageToken != "" {
+		call = call.PageToken(pageToken)
+	}
+
+	response, err := call.Do()
+	if err != nil {
+		return nil, "", fmt.Errorf("メッセージ一覧の取得に失敗しました: %w", err)
+	}
+
+	// メッセージの詳細を取得
+	var messages []domain.GmailMessage
+	for _, msg := range response.Messages {
+		message, err := s.GetMessage(ctx, credential, applicationName, msg.Id)
+		if err != nil {
+			// 個別のメッセージ取得に失敗した場合はログに記録して続行
+			fmt.Printf("メッセージ %s の取得に失敗しました: %v\n", msg.Id, err)
+			continue
+		}
+		messages = append(messages, *message)
+	}
+
+	return messages, response.NextPageToken, nil
+}
+
+// GetMessagesByLabelAndDate は指定されたラベルと日付以降のメッセージ一覧を取得します
+func (s *gmailMessageService) GetMessagesByLabelAndDate(ctx context.Context, credential domain.GmailCredential, applicationName string, labelID string, afterDate time.Time, maxResults int64, pageToken string) ([]domain.GmailMessage, string, error) {
+	// Gmail APIサービスを作成
+	service, err := s.createGmailService(ctx, credential, applicationName)
+	if err != nil {
+		return nil, "", fmt.Errorf("Gmail APIサービスの作成に失敗しました: %w", err)
+	}
+
+	// 日付検索クエリを作成（YYYY/MM/DD形式）
+	dateQuery := fmt.Sprintf("after:%s", afterDate.Format("2006/01/02"))
+
+	// 指定されたラベルのメッセージ一覧を取得
+	call := service.Users.Messages.List("me").MaxResults(maxResults).Q(dateQuery)
+	if labelID != "" {
+		call = call.LabelIds(labelID)
+	}
+	if pageToken != "" {
+		call = call.PageToken(pageToken)
+	}
+
+	response, err := call.Do()
+	if err != nil {
+		return nil, "", fmt.Errorf("メッセージ一覧の取得に失敗しました: %w", err)
+	}
+
+	// メッセージの詳細を取得
+	var messages []domain.GmailMessage
+	for _, msg := range response.Messages {
+		message, err := s.GetMessage(ctx, credential, applicationName, msg.Id)
+		if err != nil {
+			// 個別のメッセージ取得に失敗した場合はログに記録して続行
+			fmt.Printf("メッセージ %s の取得に失敗しました: %v\n", msg.Id, err)
+			continue
+		}
+		messages = append(messages, *message)
+	}
+
+	return messages, response.NextPageToken, nil
+}
+
 // decodeBase64Data はbase64データをデコードします（複数の形式を試行）
 func (s *gmailMessageService) decodeBase64Data(data string) string {
 	// URL-safe base64を試行
