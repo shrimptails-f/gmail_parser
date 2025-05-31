@@ -3,7 +3,6 @@
 package infrastructure
 
 import (
-	"business/internal/auth/application"
 	"fmt"
 	"os"
 )
@@ -15,7 +14,7 @@ type jwtService struct {
 }
 
 // NewJWTService は新しいJWTサービスを作成します
-func NewJWTService() application.JWTService {
+func NewJWTService() JWTService {
 	return &jwtService{
 		secretKey: os.Getenv("JWT_SECRET_KEY"),
 		appName:   os.Getenv("APP_NAME"),

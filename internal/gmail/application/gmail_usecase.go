@@ -3,17 +3,18 @@
 package application
 
 import (
-	"business/internal/auth/domain"
+	"business/internal/gmail/domain"
+	r "business/internal/gmail/infrastructure"
 	"context"
 )
 
 // GmailAuthUseCaseImpl はGmailAuthUseCaseの実装です
 type GmailAuthUseCaseImpl struct {
-	gmailAuthService GmailAuthService
+	gmailAuthService r.GmailAuthService
 }
 
 // NewGmailAuthUseCase はGmailAuthUseCaseの新しいインスタンスを作成します
-func NewGmailAuthUseCase(gmailAuthService GmailAuthService) GmailAuthUseCase {
+func NewGmailAuthUseCase(gmailAuthService r.GmailAuthService) GmailAuthUseCase {
 	return &GmailAuthUseCaseImpl{
 		gmailAuthService: gmailAuthService,
 	}

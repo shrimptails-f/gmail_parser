@@ -3,23 +3,24 @@
 package application
 
 import (
-	"business/internal/auth/domain"
+	"business/internal/gmail/domain"
+	r "business/internal/gmail/infrastructure"
 	"context"
 	"fmt"
 )
 
 // authUseCase は認証機能のユースケース実装です
 type authUseCase struct {
-	authRepo      AuthRepository
-	googleService GoogleOAuthService
-	jwtService    JWTService
+	authRepo      r.AuthRepository
+	googleService r.GoogleOAuthService
+	jwtService    r.JWTService
 }
 
 // NewAuthUseCase は新しい認証ユースケースを作成します
 func NewAuthUseCase(
-	authRepo AuthRepository,
-	googleService GoogleOAuthService,
-	jwtService JWTService,
+	authRepo r.AuthRepository,
+	googleService r.GoogleOAuthService,
+	jwtService r.JWTService,
 ) AuthUseCase {
 	return &authUseCase{
 		authRepo:      authRepo,

@@ -3,8 +3,7 @@
 package infrastructure
 
 import (
-	"business/internal/auth/application"
-	"business/internal/auth/domain"
+	"business/internal/gmail/domain"
 	"context"
 	"fmt"
 
@@ -18,7 +17,7 @@ type googleOAuthService struct {
 }
 
 // NewGoogleOAuthService は新しいGoogle OAuth2サービスを作成します
-func NewGoogleOAuthService(authConfig domain.AuthConfig) application.GoogleOAuthService {
+func NewGoogleOAuthService(authConfig domain.AuthConfig) GoogleOAuthService {
 	config := &oauth2.Config{
 		ClientID:     authConfig.ClientID,
 		ClientSecret: authConfig.ClientSecret,

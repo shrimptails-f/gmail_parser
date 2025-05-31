@@ -8,16 +8,17 @@ import (
 	"time"
 
 	"business/internal/openai/domain"
+	r "business/internal/openai/infrastructure"
 )
 
 // TextAnalysisUseCaseImpl はテキスト字句解析のユースケース実装です
 type TextAnalysisUseCaseImpl struct {
 	textAnalysisService TextAnalysisService
-	promptService       PromptService
+	promptService       r.PromptService
 }
 
 // NewTextAnalysisUseCase はテキスト字句解析ユースケースを作成します
-func NewTextAnalysisUseCase(textAnalysisService TextAnalysisService, promptService PromptService) TextAnalysisUseCase {
+func NewTextAnalysisUseCase(textAnalysisService TextAnalysisService, promptService r.PromptService) TextAnalysisUseCase {
 	return &TextAnalysisUseCaseImpl{
 		textAnalysisService: textAnalysisService,
 		promptService:       promptService,

@@ -3,10 +3,10 @@
 package main
 
 import (
-	"business/internal/auth/application"
-	"business/internal/auth/domain"
-	"business/internal/auth/infrastructure"
 	emailstoredi "business/internal/emailstore/di"
+	"business/internal/gmail/application"
+	"business/internal/gmail/domain"
+	"business/internal/gmail/infrastructure"
 	httpinfra "business/internal/http/infrastructure"
 	aiapp "business/internal/openai/application"
 	openaidomain "business/internal/openai/domain"
@@ -359,9 +359,9 @@ func analyzeEmailMessage(ctx context.Context, message *domain.GmailMessage) erro
 	}
 
 	// 結果を表示
-	if err := emailAnalysisUseCase.DisplayEmailAnalysisResult(result); err != nil {
-		return fmt.Errorf("分析結果表示エラー: %w", err)
-	}
+	// if err := emailAnalysisUseCase.DisplayEmailAnalysisResult(result); err != nil {
+	// 	return fmt.Errorf("分析結果表示エラー: %w", err)
+	// }
 
 	// DB保存処理を実行
 	if err := saveEmailAnalysisResult(ctx, result); err != nil {

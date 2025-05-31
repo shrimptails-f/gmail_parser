@@ -3,8 +3,8 @@
 package infrastructure
 
 import (
-	"business/internal/openai/application"
 	"business/internal/openai/domain"
+	openair "business/internal/openai/infrastructure"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -49,11 +49,11 @@ type APIError struct {
 
 // EmailAnalysisServiceImpl はメール分析サービスの実装です
 type EmailAnalysisServiceImpl struct {
-	promptService application.PromptService
+	promptService openair.PromptService
 }
 
 // NewEmailAnalysisService はメール分析サービスを作成します
-func NewEmailAnalysisService(promptService application.PromptService) *EmailAnalysisServiceImpl {
+func NewEmailAnalysisService(promptService openair.PromptService) *EmailAnalysisServiceImpl {
 	return &EmailAnalysisServiceImpl{
 		promptService: promptService,
 	}

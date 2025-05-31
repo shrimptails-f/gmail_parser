@@ -3,8 +3,7 @@
 package infrastructure
 
 import (
-	"business/internal/auth/application"
-	"business/internal/auth/domain"
+	"business/internal/gmail/domain"
 	"context"
 	"encoding/base64"
 	"fmt"
@@ -21,7 +20,7 @@ import (
 type gmailMessageService struct{}
 
 // NewGmailMessageService は新しいGmailメッセージ取得サービスを作成します
-func NewGmailMessageService() application.GmailMessageService {
+func NewGmailMessageService() GmailMessageService {
 	return &gmailMessageService{}
 }
 
