@@ -5,6 +5,7 @@ package infrastructure
 import (
 	"business/internal/gmail/domain"
 	"context"
+	"time"
 )
 
 // AuthRepository は認証機能のリポジトリインターフェースです
@@ -65,4 +66,10 @@ type GmailMessageService interface {
 
 	// GetMessagesByLabel は指定されたラベルのメッセージ一覧を取得します
 	GetMessagesByLabel(ctx context.Context, credential domain.GmailCredential, applicationName string, labelID string, maxResults int64) ([]domain.GmailMessage, error)
+
+	// GetMessagesByLabelWithPagination は指定されたラベルのメッセージ一覧をページネーションで取得します
+	GetMessagesByLabelWithPagination(ctx context.Context, credential domain.GmailCredential, applicationName string, labelID string, maxResults int64, pageToken string) ([]domain.GmailMessage, string, error)
+
+	// GetMessagesByLabelAndDate は指定されたラベルと日付以降のメッセージ一覧を取得します
+	GetMessagesByLabelAndDate(ctx context.Context, credential domain.GmailCredential, applicationName string, labelID string, afterDate time.Time, maxResults int64, pageToken string) ([]domain.GmailMessage, string, error)
 }

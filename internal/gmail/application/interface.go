@@ -26,6 +26,9 @@ type GmailMessageUseCase interface {
 
 	// GetMessagesByLabelPath は指定されたラベルパスのメッセージ一覧を取得します
 	GetMessagesByLabelPath(ctx context.Context, config domain.GmailAuthConfig, labelPath string, maxResults int64) ([]domain.GmailMessage, error)
+
+	// GetAllMessagesByLabelPathFromToday は指定されたラベルパスの当日0時以降のメッセージを全件取得します
+	GetAllMessagesByLabelPathFromToday(ctx context.Context, config domain.GmailAuthConfig, labelPath string, maxResults int64) ([]domain.GmailMessage, error)
 }
 
 // AuthUseCase は認証機能のユースケースインターフェースです
