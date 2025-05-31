@@ -4,6 +4,7 @@ package application
 
 import (
 	"business/internal/gmail/domain"
+	r "business/internal/gmail/infrastructure"
 	"context"
 	"errors"
 	"fmt"
@@ -11,12 +12,12 @@ import (
 
 // GmailMessageUseCaseImpl はGmailMessageUseCaseの実装です
 type GmailMessageUseCaseImpl struct {
-	gmailAuthService    GmailAuthService
-	gmailMessageService GmailMessageService
+	gmailAuthService    r.GmailAuthService
+	gmailMessageService r.GmailMessageService
 }
 
 // NewGmailMessageUseCase はGmailMessageUseCaseの新しいインスタンスを作成します
-func NewGmailMessageUseCase(gmailAuthService GmailAuthService, gmailMessageService GmailMessageService) GmailMessageUseCase {
+func NewGmailMessageUseCase(gmailAuthService r.GmailAuthService, gmailMessageService r.GmailMessageService) GmailMessageUseCase {
 	return &GmailMessageUseCaseImpl{
 		gmailAuthService:    gmailAuthService,
 		gmailMessageService: gmailMessageService,

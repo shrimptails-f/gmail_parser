@@ -3,7 +3,6 @@
 package infrastructure
 
 import (
-	"business/internal/gmail/application"
 	"business/internal/gmail/domain"
 	"context"
 	"encoding/json"
@@ -24,7 +23,7 @@ import (
 type gmailAuthService struct{}
 
 // NewGmailAuthService は新しいGmail認証サービスを作成します
-func NewGmailAuthService() application.GmailAuthService {
+func NewGmailAuthService() GmailAuthService {
 	return &gmailAuthService{}
 }
 

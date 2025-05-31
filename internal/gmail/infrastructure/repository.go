@@ -3,7 +3,6 @@
 package infrastructure
 
 import (
-	"business/internal/gmail/application"
 	"business/internal/gmail/domain"
 	"context"
 	"fmt"
@@ -55,7 +54,7 @@ type authRepository struct {
 }
 
 // NewAuthRepository は新しい認証リポジトリを作成します
-func NewAuthRepository(db *gorm.DB) application.AuthRepository {
+func NewAuthRepository(db *gorm.DB) AuthRepository {
 	return &authRepository{
 		db: db,
 	}
