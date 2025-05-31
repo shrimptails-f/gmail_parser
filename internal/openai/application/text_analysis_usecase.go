@@ -104,6 +104,52 @@ func (u *TextAnalysisUseCaseImpl) AnalyzeEmailText(ctx context.Context, emailTex
 	return result, nil
 }
 
+// AnalyzeEmailTextMultiple はメール本文をAIで字句解析し、複数案件に対応した結果を返します
+// 1. プロンプトファイルの内容を読み込み
+// 2. プロンプト + メール本文を結合
+// 3. AI APIに送信して複数の解析結果を取得
+func (u *TextAnalysisUseCaseImpl) AnalyzeEmailTextMultiple(ctx context.Context, emailText, messageID, subject string) ([]*domain.TextAnalysisResult, error) {
+	// 空のメール本文チェック
+	if emailText == "" {
+		return nil, domain.ErrEmptyText
+	}
+
+	// プロンプトファイルの読み込み
+	promptText, err := u.promptService.LoadPrompt("text_analysis_prompt.txt")
+	if err != nil {
+		return nil, fmt.Errorf("プロンプト読み込みエラー: %w", err)
+	}
+
+	// プロンプトとメール本文を結合
+	combinedText := promptText + "\n\n" + emailText
+
+	// テキスト解析リクエストを作成
+	request := domain.NewTextAnalysisRequest(combinedText)
+	request.Metadata["source"] = "email"
+	request.Metadata["message_id"] = messageID
+	request.Metadata["subject"] = subject
+
+	// リクエストの妥当性チェック
+	if err := request.IsValid(); err != nil {
+		return nil, fmt.Errorf("リクエスト妥当性エラー: %w", err)
+	}
+
+	// AI解析実行（複数案件対応）
+	results, err := u.textAnalysisService.AnalyzeTextMultiple(ctx, request)
+	if err != nil {
+		return nil, fmt.Errorf("テキスト解析エラー: %w", err)
+	}
+
+	// 結果にメタデータを設定
+	for _, result := range results {
+		result.MessageID = messageID
+		result.Subject = subject
+		result.AnalyzedAt = time.Now()
+	}
+
+	return results, nil
+}
+
 // DisplayAnalysisResult は解析結果をターミナルに表示します
 func (u *TextAnalysisUseCaseImpl) DisplayAnalysisResult(result *domain.TextAnalysisResult) error {
 	if result == nil {
