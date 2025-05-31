@@ -226,6 +226,22 @@ func (r *EmailStoreRepositoryImpl) getOrCreateKeywordGroup(tx *gorm.DB, name str
 		return nil, fmt.Errorf("KeywordGroup検索エラー: %w", err)
 	}
 
+	// 表記ゆれとして既に存在するかチェック
+	var existingKeyWord domain.KeyWord
+	err = tx.Where("word = ?", name).First(&existingKeyWord).Error
+	if err == nil {
+		// 既存の表記ゆれが見つかった場合、対応するKeywordGroupを取得
+		err = tx.Where("keyword_group_id = ?", existingKeyWord.KeywordGroupID).First(&keywordGroup).Error
+		if err != nil {
+			return nil, fmt.Errorf("既存KeywordGroup取得エラー: %w", err)
+		}
+		return &keywordGroup, nil
+	}
+
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, fmt.Errorf("KeyWord検索エラー: %w", err)
+	}
+
 	// 新規作成
 	keywordGroup = domain.KeywordGroup{
 		Name: name,
@@ -287,6 +303,22 @@ func (r *EmailStoreRepositoryImpl) getOrCreatePositionGroup(tx *gorm.DB, name st
 
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, fmt.Errorf("PositionGroup検索エラー: %w", err)
+	}
+
+	// 表記ゆれとして既に存在するかチェック
+	var existingPositionWord domain.PositionWord
+	err = tx.Where("word = ?", name).First(&existingPositionWord).Error
+	if err == nil {
+		// 既存の表記ゆれが見つかった場合、対応するPositionGroupを取得
+		err = tx.Where("position_group_id = ?", existingPositionWord.PositionGroupID).First(&positionGroup).Error
+		if err != nil {
+			return nil, fmt.Errorf("既存PositionGroup取得エラー: %w", err)
+		}
+		return &positionGroup, nil
+	}
+
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, fmt.Errorf("PositionWord検索エラー: %w", err)
 	}
 
 	// 新規作成
@@ -351,6 +383,22 @@ func (r *EmailStoreRepositoryImpl) getOrCreateWorkTypeGroup(tx *gorm.DB, name st
 		return nil, fmt.Errorf("WorkTypeGroup検索エラー: %w", err)
 	}
 
+	// 表記ゆれとして既に存在するかチェック
+	var existingWorkTypeWord domain.WorkTypeWord
+	err = tx.Where("word = ?", name).First(&existingWorkTypeWord).Error
+	if err == nil {
+		// 既存の表記ゆれが見つかった場合、対応するWorkTypeGroupを取得
+		err = tx.Where("work_type_group_id = ?", existingWorkTypeWord.WorkTypeGroupID).First(&workTypeGroup).Error
+		if err != nil {
+			return nil, fmt.Errorf("既存WorkTypeGroup取得エラー: %w", err)
+		}
+		return &workTypeGroup, nil
+	}
+
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, fmt.Errorf("WorkTypeWord検索エラー: %w", err)
+	}
+
 	// 新規作成
 	workTypeGroup = domain.WorkTypeGroup{
 		Name: name,
@@ -392,6 +440,36 @@ func (r *EmailStoreRepositoryImpl) EmailExists(ctx context.Context, id string) (
 	err := r.db.Model(&domain.Email{}).Where("id = ?", id).Count(&count).Error
 	if err != nil {
 		return false, fmt.Errorf("メール存在チェックエラー: %w", err)
+	}
+	return count > 0, nil
+}
+
+// KeywordExists はキーワードが既に存在するかチェックします
+func (r *EmailStoreRepositoryImpl) KeywordExists(ctx context.Context, word string) (bool, error) {
+	var count int64
+	err := r.db.Model(&domain.KeyWord{}).Where("word = ?", word).Count(&count).Error
+	if err != nil {
+		return false, fmt.Errorf("キーワード存在チェックエラー: %w", err)
+	}
+	return count > 0, nil
+}
+
+// PositionExists はポジションが既に存在するかチェックします
+func (r *EmailStoreRepositoryImpl) PositionExists(ctx context.Context, word string) (bool, error) {
+	var count int64
+	err := r.db.Model(&domain.PositionWord{}).Where("word = ?", word).Count(&count).Error
+	if err != nil {
+		return false, fmt.Errorf("ポジション存在チェックエラー: %w", err)
+	}
+	return count > 0, nil
+}
+
+// WorkTypeExists は業務種別が既に存在するかチェックします
+func (r *EmailStoreRepositoryImpl) WorkTypeExists(ctx context.Context, word string) (bool, error) {
+	var count int64
+	err := r.db.Model(&domain.WorkTypeWord{}).Where("word = ?", word).Count(&count).Error
+	if err != nil {
+		return false, fmt.Errorf("業務種別存在チェックエラー: %w", err)
 	}
 	return count > 0, nil
 }
