@@ -36,6 +36,20 @@ func (u *EmailStoreUseCaseImpl) SaveEmailAnalysisResult(ctx context.Context, res
 	return nil
 }
 
+// CheckEmailExists はメールIDの存在チェックを行います
+func (u *EmailStoreUseCaseImpl) CheckEmailExists(ctx context.Context, emailID string) (bool, error) {
+	if emailID == "" {
+		return false, fmt.Errorf("メールIDが空です")
+	}
+
+	exists, err := u.emailStoreRepository.EmailExists(ctx, emailID)
+	if err != nil {
+		return false, fmt.Errorf("メール存在チェックエラー: %w", err)
+	}
+
+	return exists, nil
+}
+
 // CheckKeywordExists はキーワードの存在チェックを行います
 func (u *EmailStoreUseCaseImpl) CheckKeywordExists(ctx context.Context, word string) (bool, error) {
 	if word == "" {

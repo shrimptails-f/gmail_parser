@@ -71,7 +71,7 @@ func main() {
 			os.Exit(1)
 		}
 		labelPath := os.Args[2]
-		if err := testGmailMessagesByLabel(ctx, l, labelPath); err != nil {
+		if err := getGmailMessagesByLabel(ctx, l, labelPath); err != nil {
 			l.Error(fmt.Errorf("ラベル指定gmailメッセージの取得に失敗しました: %w", err))
 			os.Exit(1)
 		}
@@ -243,8 +243,8 @@ func testGmailLabels(ctx context.Context, l *logger.Logger) error {
 	return nil
 }
 
-// testGmailMessagesByLabel はラベル指定でGmailメッセージを取得してテストします
-func testGmailMessagesByLabel(ctx context.Context, l *logger.Logger, labelPath string) error {
+// getGmailMessagesByLabel はラベル指定でGmailメッセージを取得してテストします
+func getGmailMessagesByLabel(ctx context.Context, l *logger.Logger, labelPath string) error {
 	// client-secret.jsonファイルのパスを取得
 	clientSecretPath := getClientSecretPath()
 	if clientSecretPath == "" {
@@ -326,6 +326,27 @@ func getClientSecretPath() string {
 
 // analyzeEmailMessage はメールメッセージを分析します
 func analyzeEmailMessage(ctx context.Context, message *domain.GmailMessage) error {
+	// MySQL接続を作成してメールID存在確認
+	mysqlConn, err := mysql.New()
+	if err != nil {
+		return fmt.Errorf("MySQL接続エラー: %w", err)
+	}
+
+	// EmailStoreUseCaseを作成
+	emailStoreUseCase := emailstoredi.ProvideEmailStoreDependencies(mysqlConn.DB)
+
+	// メールIDの存在確認
+	exists, err := emailStoreUseCase.CheckEmailExists(ctx, message.ID)
+	if err != nil {
+		return fmt.Errorf("メール存在確認エラー: %w", err)
+	}
+
+	// 既に存在する場合はスキップ
+	if exists {
+		fmt.Printf("メールID %s は既に処理済みです。字句解析をスキップします。\n", message.ID)
+		return nil
+	}
+
 	// サービスを作成
 	promptService := aiinfra.NewFilePromptService("prompts")
 	emailAnalysisService := httpinfra.NewEmailAnalysisService(promptService)
