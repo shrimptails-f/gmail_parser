@@ -28,7 +28,7 @@ func NewEmailStoreRepository(db *gorm.DB) EmailStoreRepository {
 // SaveEmail はメール分析結果をデータベースに保存します
 func (r *EmailStoreRepositoryImpl) SaveEmail(ctx context.Context, result *openaidomain.EmailAnalysisResult) error {
 	// 重複チェック
-	exists, err := r.EmailExists(ctx, result.ID)
+	exists, err := r.EmailExists(ctx, result.GmailID)
 	if err != nil {
 		return fmt.Errorf("メール存在チェックエラー: %w", err)
 	}
@@ -50,7 +50,7 @@ func (r *EmailStoreRepositoryImpl) SaveEmail(ctx context.Context, result *openai
 	// Emailテーブルに保存
 	body := result.Body
 	email := &domain.Email{
-		ID:           result.ID,
+		GmailID:      result.GmailID,
 		Subject:      result.Subject,
 		SenderName:   result.From,
 		SenderEmail:  result.FromEmail,
@@ -59,14 +59,14 @@ func (r *EmailStoreRepositoryImpl) SaveEmail(ctx context.Context, result *openai
 		Category:     "案件", // デフォルトで案件として設定
 	}
 
-	if err := tx.Create(email).Error; err != nil {
+	if err := tx.Create(&email).Error; err != nil {
 		tx.Rollback()
 		return fmt.Errorf("メール保存エラー: %w", err)
 	}
 
 	// 案件メールの場合、詳細情報を保存
 	if result.MailCategory == "案件" {
-		if err := r.saveProjectDetails(tx, result); err != nil {
+		if err := r.saveProjectDetails(tx, result, *email); err != nil {
 			tx.Rollback()
 			return fmt.Errorf("案件詳細保存エラー: %w", err)
 		}
@@ -80,8 +80,85 @@ func (r *EmailStoreRepositoryImpl) SaveEmail(ctx context.Context, result *openai
 	return nil
 }
 
+// SaveEmailMultiple は複数案件対応のメール分析結果をデータベースに保存します
+func (r *EmailStoreRepositoryImpl) SaveEmailMultiple(ctx context.Context, result *openaidomain.EmailAnalysisMultipleResult) error {
+	// 重複チェック
+	exists, err := r.EmailExists(ctx, result.GmailID)
+	if err != nil {
+		return fmt.Errorf("メール存在チェックエラー: %w", err)
+	}
+	if exists {
+		return domain.ErrEmailAlreadyExists
+	}
+
+	// トランザクション開始
+	tx := r.db.Begin()
+	if tx.Error != nil {
+		return fmt.Errorf("トランザクション開始エラー: %w", tx.Error)
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// Emailテーブルに保存
+	body := result.Body
+
+	// 案件情報を保存
+	for _, project := range result.Projects {
+		email := &domain.Email{
+			GmailID:      result.GmailID,
+			Subject:      result.Subject,
+			SenderName:   result.From,
+			SenderEmail:  result.FromEmail,
+			ReceivedDate: result.Date,
+			Body:         &body,
+			Category:     result.MailCategory,
+		}
+		if err := tx.Create(&email).Error; err != nil {
+			tx.Rollback()
+			return fmt.Errorf("メール保存エラー: %w", err)
+		}
+
+		if err := r.saveProjectDetailsMultiple(tx, email.ID, &project); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("案件詳細保存エラー: %w", err)
+		}
+	}
+
+	// 人材情報を保存
+	for _, candidate := range result.Candidates {
+		email := &domain.Email{
+			GmailID:      result.GmailID,
+			Subject:      result.Subject,
+			SenderName:   result.From,
+			SenderEmail:  result.FromEmail,
+			ReceivedDate: result.Date,
+			Body:         &body,
+			Category:     result.MailCategory,
+		}
+		if err := tx.Create(&email).Error; err != nil {
+			tx.Rollback()
+			return fmt.Errorf("メール保存エラー: %w", err)
+		}
+
+		if err := r.saveCandidateDetails(tx, email.ID, &candidate); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("人材詳細保存エラー: %w", err)
+		}
+	}
+
+	// トランザクションコミット
+	if err := tx.Commit().Error; err != nil {
+		return fmt.Errorf("トランザクションコミットエラー: %w", err)
+	}
+
+	return nil
+}
+
 // saveProjectDetails は案件メールの詳細情報を保存します
-func (r *EmailStoreRepositoryImpl) saveProjectDetails(tx *gorm.DB, result *openaidomain.EmailAnalysisResult) error {
+func (r *EmailStoreRepositoryImpl) saveProjectDetails(tx *gorm.DB, result *openaidomain.EmailAnalysisResult, email domain.Email) error {
 	// EmailProjectを保存
 	workLocation := result.WorkLocation
 	endTiming := result.EndPeriod
@@ -94,7 +171,7 @@ func (r *EmailStoreRepositoryImpl) saveProjectDetails(tx *gorm.DB, result *opena
 	wantSkills := strings.Join(result.RequiredSkillsWant, ",")
 
 	emailProject := &domain.EmailProject{
-		EmailID:         result.ID,
+		EmailID:         email.ID,
 		WorkLocation:    &workLocation,
 		EndTiming:       &endTiming,
 		PriceFrom:       result.PriceFrom,
@@ -119,20 +196,161 @@ func (r *EmailStoreRepositoryImpl) saveProjectDetails(tx *gorm.DB, result *opena
 	}
 
 	// キーワード関連を保存
-	if err := r.saveKeywords(tx, result); err != nil {
+	if err := r.saveKeywords(tx, result, email.ID); err != nil {
 		return fmt.Errorf("キーワード保存エラー: %w", err)
 	}
 
 	// ポジション関連を保存
-	if err := r.savePositions(tx, result); err != nil {
+	if err := r.savePositions(tx, result, email.ID); err != nil {
 		return fmt.Errorf("ポジション保存エラー: %w", err)
 	}
 
 	// 業務種別関連を保存
-	if err := r.saveWorkTypes(tx, result); err != nil {
+	if err := r.saveWorkTypes(tx, result, email.ID); err != nil {
 		return fmt.Errorf("業務種別保存エラー: %w", err)
 	}
 
+	return nil
+}
+
+// saveProjectDetailsMultiple は複数案件対応の案件詳細情報を保存します
+func (r *EmailStoreRepositoryImpl) saveProjectDetailsMultiple(tx *gorm.DB, emailID uint, project *openaidomain.ProjectAnalysisResult) error {
+	// EmailProjectを保存
+	workLocation := project.WorkLocation
+	endTiming := project.EndPeriod
+	remoteType := project.RemoteWorkCategory
+	languages := strings.Join(project.Languages, ",")
+	frameworks := strings.Join(project.Frameworks, ",")
+	positions := strings.Join(project.Positions, ",")
+	workTypes := strings.Join(project.WorkTypes, ",")
+	mustSkills := strings.Join(project.RequiredSkillsMust, ",")
+	wantSkills := strings.Join(project.RequiredSkillsWant, ",")
+	projectTitle := project.ProjectName
+
+	emailProject := &domain.EmailProject{
+		EmailID:         emailID,
+		ProjectTitle:    &projectTitle,
+		WorkLocation:    &workLocation,
+		EndTiming:       &endTiming,
+		PriceFrom:       project.PriceFrom,
+		PriceTo:         project.PriceTo,
+		RemoteType:      &remoteType,
+		RemoteFrequency: project.RemoteWorkFrequency,
+		Languages:       &languages,
+		Frameworks:      &frameworks,
+		Positions:       &positions,
+		WorkTypes:       &workTypes,
+		MustSkills:      &mustSkills,
+		WantSkills:      &wantSkills,
+	}
+
+	if err := tx.Create(emailProject).Error; err != nil {
+		return fmt.Errorf("EmailProject保存エラー: %w", err)
+	}
+
+	// EntryTimingを保存
+	if err := r.saveEntryTimings(tx, emailProject.EmailID, project.StartPeriod); err != nil {
+		return fmt.Errorf("EntryTiming保存エラー: %w", err)
+	}
+
+	// キーワード関連を保存
+	if err := r.saveKeywordsByTypeMultiple(tx, emailID, project.Languages, "LANGUAGE"); err != nil {
+		return fmt.Errorf("言語キーワード保存エラー: %w", err)
+	}
+	if err := r.saveKeywordsByTypeMultiple(tx, emailID, project.Frameworks, "FRAMEWORK"); err != nil {
+		return fmt.Errorf("フレームワークキーワード保存エラー: %w", err)
+	}
+	if err := r.saveKeywordsByTypeMultiple(tx, emailID, project.RequiredSkillsMust, "MUST"); err != nil {
+		return fmt.Errorf("必須スキル保存エラー: %w", err)
+	}
+	if err := r.saveKeywordsByTypeMultiple(tx, emailID, project.RequiredSkillsWant, "WANT"); err != nil {
+		return fmt.Errorf("希望スキル保存エラー: %w", err)
+	}
+
+	// ポジション関連を保存
+	if err := r.savePositionsMultiple(tx, emailID, project.Positions); err != nil {
+		return fmt.Errorf("ポジション保存エラー: %w", err)
+	}
+
+	// 業務種別関連を保存
+	if err := r.saveWorkTypesMultiple(tx, emailID, project.WorkTypes); err != nil {
+		return fmt.Errorf("業務種別保存エラー: %w", err)
+	}
+
+	return nil
+}
+
+// saveCandidateDetails は人材詳細情報を保存します
+func (r *EmailStoreRepositoryImpl) saveCandidateDetails(tx *gorm.DB, emailID uint, candidate *openaidomain.CandidateAnalysisResult) error {
+	// EmailCandidateを保存
+	emailCandidate := &domain.EmailCandidate{
+		EmailID: emailID,
+	}
+
+	if err := tx.Create(emailCandidate).Error; err != nil {
+		return fmt.Errorf("EmailCandidate保存エラー: %w", err)
+	}
+
+	// TODO: 人材情報の詳細フィールドが追加されたら実装
+	// 現在はEmailCandidateテーブルの基本情報のみ保存
+
+	return nil
+}
+
+// saveKeywordsByTypeMultiple は複数案件対応のキーワード保存です
+func (r *EmailStoreRepositoryImpl) saveKeywordsByTypeMultiple(tx *gorm.DB, emailID uint, keywords []string, keywordType string) error {
+	return r.saveKeywordsByType(tx, emailID, keywords, keywordType)
+}
+
+// savePositionsMultiple は複数案件対応のポジション保存です
+func (r *EmailStoreRepositoryImpl) savePositionsMultiple(tx *gorm.DB, emailID uint, positions []string) error {
+	for _, position := range positions {
+		if position == "" {
+			continue
+		}
+
+		// PositionGroupを取得または作成
+		positionGroup, err := r.getOrCreatePositionGroup(tx, position)
+		if err != nil {
+			return fmt.Errorf("PositionGroup取得/作成エラー: %w", err)
+		}
+
+		// EmailPositionGroupを作成
+		emailPositionGroup := &domain.EmailPositionGroup{
+			EmailID:         emailID,
+			PositionGroupID: positionGroup.PositionGroupID,
+		}
+
+		if err := tx.Create(emailPositionGroup).Error; err != nil {
+			return fmt.Errorf("EmailPositionGroup保存エラー: %w", err)
+		}
+	}
+	return nil
+}
+
+// saveWorkTypesMultiple は複数案件対応の業務種別保存です
+func (r *EmailStoreRepositoryImpl) saveWorkTypesMultiple(tx *gorm.DB, emailID uint, workTypes []string) error {
+	for _, workType := range workTypes {
+		if workType == "" {
+			continue
+		}
+
+		// WorkTypeGroupを取得または作成
+		workTypeGroup, err := r.getOrCreateWorkTypeGroup(tx, workType)
+		if err != nil {
+			return fmt.Errorf("WorkTypeGroup取得/作成エラー: %w", err)
+		}
+
+		// EmailWorkTypeGroupを作成
+		emailWorkTypeGroup := &domain.EmailWorkTypeGroup{
+			EmailID:         emailID,
+			WorkTypeGroupID: workTypeGroup.WorkTypeGroupID,
+		}
+
+		if err := tx.Create(emailWorkTypeGroup).Error; err != nil {
+			return fmt.Errorf("EmailWorkTypeGroup保存エラー: %w", err)
+		}
+	}
 	return nil
 }
 
@@ -147,7 +365,7 @@ func (r *EmailStoreRepositoryImpl) createTechnologiesText(result *openaidomain.E
 }
 
 // saveEntryTimings は入場時期を保存します
-func (r *EmailStoreRepositoryImpl) saveEntryTimings(tx *gorm.DB, emailProjectID string, startPeriods []string) error {
+func (r *EmailStoreRepositoryImpl) saveEntryTimings(tx *gorm.DB, emailProjectID uint, startPeriods []string) error {
 	for _, period := range startPeriods {
 		entryTiming := &domain.EntryTiming{
 			EmailProjectID: emailProjectID,
@@ -161,24 +379,24 @@ func (r *EmailStoreRepositoryImpl) saveEntryTimings(tx *gorm.DB, emailProjectID 
 }
 
 // saveKeywords はキーワード関連のデータを保存します
-func (r *EmailStoreRepositoryImpl) saveKeywords(tx *gorm.DB, result *openaidomain.EmailAnalysisResult) error {
+func (r *EmailStoreRepositoryImpl) saveKeywords(tx *gorm.DB, result *openaidomain.EmailAnalysisResult, emailId uint) error {
 	// 言語
-	if err := r.saveKeywordsByType(tx, result.ID, result.Languages, "LANGUAGE"); err != nil {
+	if err := r.saveKeywordsByType(tx, emailId, result.Languages, "LANGUAGE"); err != nil {
 		return err
 	}
 
 	// フレームワーク
-	if err := r.saveKeywordsByType(tx, result.ID, result.Frameworks, "FRAMEWORK"); err != nil {
+	if err := r.saveKeywordsByType(tx, emailId, result.Frameworks, "FRAMEWORK"); err != nil {
 		return err
 	}
 
 	// 必須スキル
-	if err := r.saveKeywordsByType(tx, result.ID, result.RequiredSkillsMust, "MUST"); err != nil {
+	if err := r.saveKeywordsByType(tx, emailId, result.RequiredSkillsMust, "MUST"); err != nil {
 		return err
 	}
 
 	// 希望スキル
-	if err := r.saveKeywordsByType(tx, result.ID, result.RequiredSkillsWant, "WANT"); err != nil {
+	if err := r.saveKeywordsByType(tx, emailId, result.RequiredSkillsWant, "WANT"); err != nil {
 		return err
 	}
 
@@ -186,7 +404,7 @@ func (r *EmailStoreRepositoryImpl) saveKeywords(tx *gorm.DB, result *openaidomai
 }
 
 // saveKeywordsByType は指定されたタイプのキーワードを保存します
-func (r *EmailStoreRepositoryImpl) saveKeywordsByType(tx *gorm.DB, emailID string, keywords []string, keywordType string) error {
+func (r *EmailStoreRepositoryImpl) saveKeywordsByType(tx *gorm.DB, emailID uint, keywords []string, keywordType string) error {
 	for _, keyword := range keywords {
 		if keyword == "" {
 			continue
@@ -266,7 +484,7 @@ func (r *EmailStoreRepositoryImpl) getOrCreateKeywordGroup(tx *gorm.DB, name str
 }
 
 // savePositions はポジション関連のデータを保存します
-func (r *EmailStoreRepositoryImpl) savePositions(tx *gorm.DB, result *openaidomain.EmailAnalysisResult) error {
+func (r *EmailStoreRepositoryImpl) savePositions(tx *gorm.DB, result *openaidomain.EmailAnalysisResult, emailId uint) error {
 	for _, position := range result.Positions {
 		if position == "" {
 			continue
@@ -280,7 +498,7 @@ func (r *EmailStoreRepositoryImpl) savePositions(tx *gorm.DB, result *openaidoma
 
 		// EmailPositionGroupを作成
 		emailPositionGroup := &domain.EmailPositionGroup{
-			EmailID:         result.ID,
+			EmailID:         emailId,
 			PositionGroupID: positionGroup.PositionGroupID,
 		}
 
@@ -344,7 +562,7 @@ func (r *EmailStoreRepositoryImpl) getOrCreatePositionGroup(tx *gorm.DB, name st
 }
 
 // saveWorkTypes は業務種別関連のデータを保存します
-func (r *EmailStoreRepositoryImpl) saveWorkTypes(tx *gorm.DB, result *openaidomain.EmailAnalysisResult) error {
+func (r *EmailStoreRepositoryImpl) saveWorkTypes(tx *gorm.DB, result *openaidomain.EmailAnalysisResult, emailId uint) error {
 	for _, workType := range result.WorkTypes {
 		if workType == "" {
 			continue
@@ -358,7 +576,7 @@ func (r *EmailStoreRepositoryImpl) saveWorkTypes(tx *gorm.DB, result *openaidoma
 
 		// EmailWorkTypeGroupを作成
 		emailWorkTypeGroup := &domain.EmailWorkTypeGroup{
-			EmailID:         result.ID,
+			EmailID:         emailId,
 			WorkTypeGroupID: workTypeGroup.WorkTypeGroupID,
 		}
 
@@ -421,8 +639,8 @@ func (r *EmailStoreRepositoryImpl) getOrCreateWorkTypeGroup(tx *gorm.DB, name st
 	return &workTypeGroup, nil
 }
 
-// GetEmailByID はIDでメールを取得します
-func (r *EmailStoreRepositoryImpl) GetGmailByID(ctx context.Context, gmail_id uint) (*domain.Email, error) {
+// GetEmailByGmailId はIDでメールを取得します
+func (r *EmailStoreRepositoryImpl) GetEmailByGmailId(ctx context.Context, gmail_id string) (*domain.Email, error) {
 	var email domain.Email
 	err := r.db.Where("gmail_id = ?", gmail_id).First(&email).Error
 	if err != nil {
@@ -437,7 +655,7 @@ func (r *EmailStoreRepositoryImpl) GetGmailByID(ctx context.Context, gmail_id ui
 // EmailExists はメールが既に存在するかチェックします
 func (r *EmailStoreRepositoryImpl) EmailExists(ctx context.Context, id string) (bool, error) {
 	var count int64
-	err := r.db.Model(&domain.Email{}).Where("id = ?", id).Count(&count).Error
+	err := r.db.Model(&domain.Email{}).Where("gmail_id = ?", id).Count(&count).Error
 	if err != nil {
 		return false, fmt.Errorf("メール存在チェックエラー: %w", err)
 	}

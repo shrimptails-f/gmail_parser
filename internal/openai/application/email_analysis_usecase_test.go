@@ -88,7 +88,7 @@ func TestEmailAnalysisUseCaseImpl_AnalyzeEmailContent(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.NotNil(t, result)
-				assert.Equal(t, tt.message.ID, result.ID)
+				assert.Equal(t, tt.message.ID, result.GmailID)
 				assert.Equal(t, tt.message.Subject, result.Subject)
 				assert.Equal(t, tt.message.From, result.From)
 				assert.Equal(t, "test@example.com", result.FromEmail)
@@ -111,7 +111,6 @@ func TestEmailAnalysisUseCaseImpl_DisplayEmailAnalysisResult(t *testing.T) {
 		{
 			name: "正常系_結果表示成功",
 			result: &domain.EmailAnalysisResult{
-				ID:           "test-id",
 				Subject:      "テスト件名",
 				From:         "Test User",
 				FromEmail:    "test@example.com",

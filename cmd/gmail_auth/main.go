@@ -7,7 +7,6 @@ import (
 	"business/internal/gmail/application"
 	"business/internal/gmail/domain"
 	"business/internal/gmail/infrastructure"
-	httpinfra "business/internal/http/infrastructure"
 	aiapp "business/internal/openai/application"
 	openaidomain "business/internal/openai/domain"
 	aiinfra "business/internal/openai/infrastructure"
@@ -17,6 +16,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"google.golang.org/api/gmail/v1"
 )
@@ -335,7 +335,7 @@ func analyzeEmailMessage(ctx context.Context, message *domain.GmailMessage) erro
 	emailStoreUseCase := emailstoredi.ProvideEmailStoreDependencies(mysqlConn.DB)
 
 	// メールIDの存在確認
-	exists, err := emailStoreUseCase.CheckEmailExists(ctx, message.ID)
+	exists, err := emailStoreUseCase.CheckGmailIdExists(ctx, message.ID)
 	if err != nil {
 		return fmt.Errorf("メール存在確認エラー: %w", err)
 	}
@@ -348,23 +348,23 @@ func analyzeEmailMessage(ctx context.Context, message *domain.GmailMessage) erro
 
 	// サービスを作成
 	promptService := aiinfra.NewFilePromptService("prompts")
-	emailAnalysisService := httpinfra.NewEmailAnalysisService(promptService)
-	emailAnalysisUseCase := aiapp.NewEmailAnalysisUseCase(emailAnalysisService)
+	// OpenAI APIキーを環境変数から取得
+	apiKey := os.Getenv("OPENAI_API_KEY")
+	if apiKey == "" {
+		return fmt.Errorf("OPENAI_API_KEY環境変数が設定されていません")
+	}
+	textAnalysisService := aiinfra.NewOpenAIService(apiKey)
+	textAnalysisUseCase := aiapp.NewTextAnalysisUseCase(textAnalysisService, promptService)
 
-	// メール分析を実行
-	result, err := emailAnalysisUseCase.AnalyzeEmailContent(ctx, message)
+	// 複数案件対応のメール分析を実行
+	results, err := textAnalysisUseCase.AnalyzeEmailTextMultiple(ctx, message.Body, message.ID, message.Subject)
 	if err != nil {
-		return fmt.Errorf("メール分析エラー: %w", err)
+		return fmt.Errorf("複数案件メール分析エラー: %w", err)
 	}
 
-	// 結果を表示
-	// if err := emailAnalysisUseCase.DisplayEmailAnalysisResult(result); err != nil {
-	// 	return fmt.Errorf("分析結果表示エラー: %w", err)
-	// }
-
-	// DB保存処理を実行
-	if err := saveEmailAnalysisResult(ctx, result); err != nil {
-		return fmt.Errorf("DB保存エラー: %w", err)
+	// 複数件対応のDB保存処理を実行
+	if err := saveEmailAnalysisMultipleResults(ctx, message, results); err != nil {
+		return fmt.Errorf("複数案件DB保存エラー: %w", err)
 	}
 
 	return nil
@@ -386,8 +386,136 @@ func saveEmailAnalysisResult(ctx context.Context, result *openaidomain.EmailAnal
 		return fmt.Errorf("メール保存エラー: %w", err)
 	}
 
-	fmt.Printf("メール分析結果をDBに保存しました: %s\n", result.ID)
+	fmt.Printf("メール分析結果をDBに保存しました: %s\n", result.GmailID)
 	return nil
+}
+
+// saveEmailAnalysisMultipleResults は複数案件対応のメール分析結果をDBに保存します
+func saveEmailAnalysisMultipleResults(ctx context.Context, message *domain.GmailMessage, results []*openaidomain.TextAnalysisResult) error {
+	// MySQL接続を作成
+	mysqlConn, err := mysql.New()
+	if err != nil {
+		return fmt.Errorf("MySQL接続エラー: %w", err)
+	}
+
+	// EmailStoreUseCaseを作成
+	emailStoreUseCase := emailstoredi.ProvideEmailStoreDependencies(mysqlConn.DB)
+
+	// 複数案件対応の結果を作成
+	multipleResult := openaidomain.NewEmailAnalysisMultipleResult(
+		message.ID,
+		message.Subject,
+		extractSenderName(message.From),
+		extractEmailAddress(message.From),
+		message.Body,
+		message.Date,
+	)
+
+	// メール区分を設定（デフォルトで案件）
+	multipleResult.MailCategory = "案件"
+
+	// AI解析結果から案件情報を抽出
+	for _, result := range results {
+		// 営業案件メール情報がある場合は案件として追加
+		if hasProjectInfo(result) {
+			project := convertToProjectAnalysisResult(result)
+			multipleResult.AddProject(project)
+		}
+	}
+
+	// 案件情報がない場合はデフォルトの案件を追加
+	if !multipleResult.HasProjects() {
+		defaultProject := openaidomain.ProjectAnalysisResult{
+			ProjectName:         "不明",
+			StartPeriod:         []string{},
+			EndPeriod:           "",
+			WorkLocation:        "",
+			PriceFrom:           nil,
+			PriceTo:             nil,
+			Languages:           []string{},
+			Frameworks:          []string{},
+			Positions:           []string{},
+			WorkTypes:           []string{},
+			RequiredSkillsMust:  []string{},
+			RequiredSkillsWant:  []string{},
+			RemoteWorkCategory:  "",
+			RemoteWorkFrequency: nil,
+		}
+		multipleResult.AddProject(defaultProject)
+	}
+
+	// 複数案件対応のメール分析結果を保存
+	if err := emailStoreUseCase.SaveEmailAnalysisMultipleResult(ctx, multipleResult); err != nil {
+		return fmt.Errorf("複数案件メール保存エラー: %w", err)
+	}
+
+	fmt.Printf("複数案件対応メール分析結果をDBに保存しました: %s (案件数: %d件)\n", multipleResult.GmailID, multipleResult.GetProjectCount())
+	return nil
+}
+
+// hasProjectInfo は案件情報が含まれているかチェックします
+func hasProjectInfo(result *openaidomain.TextAnalysisResult) bool {
+	// キーワードやエンティティから案件情報を判定
+	return len(result.Keywords) > 0 || len(result.Entities) > 0
+}
+
+// convertToProjectAnalysisResult はTextAnalysisResultを案件分析結果に変換します
+func convertToProjectAnalysisResult(result *openaidomain.TextAnalysisResult) openaidomain.ProjectAnalysisResult {
+	project := openaidomain.ProjectAnalysisResult{
+		ProjectName:         result.Summary, // 要約を案件名として使用
+		StartPeriod:         []string{},
+		EndPeriod:           "",
+		WorkLocation:        "",
+		PriceFrom:           nil,
+		PriceTo:             nil,
+		Languages:           []string{},
+		Frameworks:          []string{},
+		Positions:           []string{},
+		WorkTypes:           []string{},
+		RequiredSkillsMust:  []string{},
+		RequiredSkillsWant:  []string{},
+		RemoteWorkCategory:  "",
+		RemoteWorkFrequency: nil,
+	}
+
+	// キーワードから技術情報を抽出
+	for _, keyword := range result.Keywords {
+		switch keyword.Category {
+		case "言語":
+			project.Languages = append(project.Languages, keyword.Text)
+		case "フレームワーク":
+			project.Frameworks = append(project.Frameworks, keyword.Text)
+		}
+	}
+
+	// エンティティからポジション情報を抽出
+	for _, entity := range result.Entities {
+		if entity.Type == "POSITION" {
+			project.Positions = append(project.Positions, entity.Name)
+		}
+	}
+
+	return project
+}
+
+// extractSenderName は送信者情報から名前を抽出します
+func extractSenderName(from string) string {
+	// 簡単な実装："<"より前の部分を名前とする
+	if idx := strings.Index(from, "<"); idx > 0 {
+		return strings.TrimSpace(from[:idx])
+	}
+	return from
+}
+
+// extractEmailAddress は送信者情報からメールアドレスを抽出します
+func extractEmailAddress(from string) string {
+	// 簡単な実装："<"と">"の間の部分をメールアドレスとする
+	start := strings.Index(from, "<")
+	end := strings.Index(from, ">")
+	if start >= 0 && end > start {
+		return from[start+1 : end]
+	}
+	return from
 }
 
 func printUsage() {

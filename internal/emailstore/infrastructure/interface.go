@@ -13,8 +13,11 @@ type EmailStoreRepository interface {
 	// SaveEmail はメール分析結果をデータベースに保存します
 	SaveEmail(ctx context.Context, result *openaidomain.EmailAnalysisResult) error
 
-	// GetEmailByID はIDでメールを取得します
-	GetGmailByID(ctx context.Context, gmail_id uint) (*domain.Email, error)
+	// SaveEmailMultiple は複数案件対応のメール分析結果をデータベースに保存します
+	SaveEmailMultiple(ctx context.Context, result *openaidomain.EmailAnalysisMultipleResult) error
+
+	// GetEmailByGmailId はIDでメールを取得します
+	GetEmailByGmailId(ctx context.Context, gmail_id string) (*domain.Email, error)
 
 	// EmailExists はメールが既に存在するかチェックします
 	EmailExists(ctx context.Context, id string) (bool, error)

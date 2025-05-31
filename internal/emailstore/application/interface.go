@@ -12,8 +12,11 @@ type EmailStoreUseCase interface {
 	// SaveEmailAnalysisResult はメール分析結果を保存します
 	SaveEmailAnalysisResult(ctx context.Context, result *openaidomain.EmailAnalysisResult) error
 
-	// CheckEmailExists はメールIDの存在チェックを行います
-	CheckEmailExists(ctx context.Context, emailID string) (bool, error)
+	// SaveEmailAnalysisMultipleResult は複数案件対応のメール分析結果を保存します
+	SaveEmailAnalysisMultipleResult(ctx context.Context, result *openaidomain.EmailAnalysisMultipleResult) error
+
+	// CheckGmailExists はGメールIDの存在チェックを行います
+	CheckGmailIdExists(ctx context.Context, gmailId string) (bool, error)
 
 	// CheckKeywordExists はキーワードの存在チェックを行います
 	CheckKeywordExists(ctx context.Context, word string) (bool, error)

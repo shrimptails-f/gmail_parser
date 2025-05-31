@@ -103,7 +103,6 @@ func (s *EmailAnalysisServiceImpl) AnalyzeEmail(ctx context.Context, request *do
 
 	// 結果を作成
 	result := &domain.EmailAnalysisResult{
-		ID:                  request.MessageID,
 		Subject:             request.Subject,
 		MailCategory:        analysisData.MailCategory,
 		StartPeriod:         analysisData.StartPeriod,

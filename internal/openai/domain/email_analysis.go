@@ -10,7 +10,7 @@ import (
 // EmailAnalysisResult はメール分析結果のドメインモデルです
 type EmailAnalysisResult struct {
 	// Gmailの情報
-	ID        string    `json:"id"`
+	GmailID   string    `json:"gmail_id"`
 	Subject   string    `json:"subject"`
 	From      string    `json:"from"`
 	FromEmail string    `json:"from_email"`

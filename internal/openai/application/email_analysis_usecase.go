@@ -40,7 +40,7 @@ func (u *EmailAnalysisUseCaseImpl) AnalyzeEmailContent(ctx context.Context, mess
 	}
 
 	// Gmailの情報を設定
-	result.ID = message.ID
+	result.GmailID = message.ID
 	result.Subject = message.Subject
 	result.From = message.From
 	result.FromEmail = extractEmailAddress(message.From)
@@ -57,7 +57,7 @@ func (u *EmailAnalysisUseCaseImpl) DisplayEmailAnalysisResult(result *domain.Ema
 	}
 
 	fmt.Println("=== メール分析結果 ===")
-	fmt.Printf("\"ID\": \"%s\"\n", result.ID)
+	fmt.Printf("\"ID\": \"%s\"\n", result.GmailID)
 	fmt.Printf("\"件名\": \"%s\"\n", result.Subject)
 	fmt.Printf("\"差出人名\": \"%s\"\n", result.From)
 	fmt.Printf("\"メールアドレス\": \"%s\"\n", result.FromEmail)
