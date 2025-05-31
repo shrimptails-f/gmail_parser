@@ -26,6 +26,8 @@ type EmailAnalysisResult struct {
 	PriceTo             *int     `json:"単価TO"`
 	Languages           []string `json:"言語"`
 	Frameworks          []string `json:"フレームワーク"`
+	Positions           []string `json:"ポジション"`
+	WorkTypes           []string `json:"業務"`
 	RequiredSkillsMust  []string `json:"求めるスキル MUST"`
 	RequiredSkillsWant  []string `json:"求めるスキル WANT"`
 	RemoteWorkCategory  string   `json:"リモートワーク区分"`

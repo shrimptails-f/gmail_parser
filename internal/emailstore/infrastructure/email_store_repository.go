@@ -89,6 +89,8 @@ func (r *EmailStoreRepositoryImpl) saveProjectDetails(tx *gorm.DB, result *opena
 	remoteType := result.RemoteWorkCategory
 	languages := strings.Join(result.Languages, ",")
 	frameworks := strings.Join(result.Frameworks, ",")
+	positions := strings.Join(result.Positions, ",")
+	workTypes := strings.Join(result.WorkTypes, ",")
 	mustSkills := strings.Join(result.RequiredSkillsMust, ",")
 	wantSkills := strings.Join(result.RequiredSkillsWant, ",")
 
@@ -102,6 +104,8 @@ func (r *EmailStoreRepositoryImpl) saveProjectDetails(tx *gorm.DB, result *opena
 		RemoteFrequency: result.RemoteWorkFrequency,
 		Languages:       &languages,
 		Frameworks:      &frameworks,
+		Positions:       &positions,
+		WorkTypes:       &workTypes,
 		MustSkills:      &mustSkills,
 		WantSkills:      &wantSkills,
 	}
@@ -118,6 +122,16 @@ func (r *EmailStoreRepositoryImpl) saveProjectDetails(tx *gorm.DB, result *opena
 	// キーワード関連を保存
 	if err := r.saveKeywords(tx, result); err != nil {
 		return fmt.Errorf("キーワード保存エラー: %w", err)
+	}
+
+	// ポジション関連を保存
+	if err := r.savePositions(tx, result); err != nil {
+		return fmt.Errorf("ポジション保存エラー: %w", err)
+	}
+
+	// 業務種別関連を保存
+	if err := r.saveWorkTypes(tx, result); err != nil {
+		return fmt.Errorf("業務種別保存エラー: %w", err)
 	}
 
 	return nil
@@ -223,7 +237,141 @@ func (r *EmailStoreRepositoryImpl) getOrCreateKeywordGroup(tx *gorm.DB, name str
 		return nil, fmt.Errorf("KeywordGroup作成エラー: %w", err)
 	}
 
+	// KeyWordも作成（表記ゆれとして同じ名前を登録）
+	keyWord := &domain.KeyWord{
+		KeywordGroupID: keywordGroup.KeywordGroupID,
+		Word:           name,
+	}
+
+	if err := tx.Create(keyWord).Error; err != nil {
+		return nil, fmt.Errorf("KeyWord作成エラー: %w", err)
+	}
+
 	return &keywordGroup, nil
+}
+
+// savePositions はポジション関連のデータを保存します
+func (r *EmailStoreRepositoryImpl) savePositions(tx *gorm.DB, result *openaidomain.EmailAnalysisResult) error {
+	for _, position := range result.Positions {
+		if position == "" {
+			continue
+		}
+
+		// PositionGroupを取得または作成
+		positionGroup, err := r.getOrCreatePositionGroup(tx, position)
+		if err != nil {
+			return fmt.Errorf("PositionGroup取得/作成エラー: %w", err)
+		}
+
+		// EmailPositionGroupを作成
+		emailPositionGroup := &domain.EmailPositionGroup{
+			EmailID:         result.ID,
+			PositionGroupID: positionGroup.PositionGroupID,
+		}
+
+		if err := tx.Create(emailPositionGroup).Error; err != nil {
+			return fmt.Errorf("EmailPositionGroup保存エラー: %w", err)
+		}
+	}
+	return nil
+}
+
+// getOrCreatePositionGroup はPositionGroupを取得または作成します
+func (r *EmailStoreRepositoryImpl) getOrCreatePositionGroup(tx *gorm.DB, name string) (*domain.PositionGroup, error) {
+	var positionGroup domain.PositionGroup
+
+	// 既存のPositionGroupを検索
+	err := tx.Where("name = ?", name).First(&positionGroup).Error
+	if err == nil {
+		return &positionGroup, nil
+	}
+
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, fmt.Errorf("PositionGroup検索エラー: %w", err)
+	}
+
+	// 新規作成
+	positionGroup = domain.PositionGroup{
+		Name: name,
+	}
+
+	if err := tx.Create(&positionGroup).Error; err != nil {
+		return nil, fmt.Errorf("PositionGroup作成エラー: %w", err)
+	}
+
+	// PositionWordも作成（表記ゆれとして同じ名前を登録）
+	positionWord := &domain.PositionWord{
+		PositionGroupID: positionGroup.PositionGroupID,
+		Word:            name,
+	}
+
+	if err := tx.Create(positionWord).Error; err != nil {
+		return nil, fmt.Errorf("PositionWord作成エラー: %w", err)
+	}
+
+	return &positionGroup, nil
+}
+
+// saveWorkTypes は業務種別関連のデータを保存します
+func (r *EmailStoreRepositoryImpl) saveWorkTypes(tx *gorm.DB, result *openaidomain.EmailAnalysisResult) error {
+	for _, workType := range result.WorkTypes {
+		if workType == "" {
+			continue
+		}
+
+		// WorkTypeGroupを取得または作成
+		workTypeGroup, err := r.getOrCreateWorkTypeGroup(tx, workType)
+		if err != nil {
+			return fmt.Errorf("WorkTypeGroup取得/作成エラー: %w", err)
+		}
+
+		// EmailWorkTypeGroupを作成
+		emailWorkTypeGroup := &domain.EmailWorkTypeGroup{
+			EmailID:         result.ID,
+			WorkTypeGroupID: workTypeGroup.WorkTypeGroupID,
+		}
+
+		if err := tx.Create(emailWorkTypeGroup).Error; err != nil {
+			return fmt.Errorf("EmailWorkTypeGroup保存エラー: %w", err)
+		}
+	}
+	return nil
+}
+
+// getOrCreateWorkTypeGroup はWorkTypeGroupを取得または作成します
+func (r *EmailStoreRepositoryImpl) getOrCreateWorkTypeGroup(tx *gorm.DB, name string) (*domain.WorkTypeGroup, error) {
+	var workTypeGroup domain.WorkTypeGroup
+
+	// 既存のWorkTypeGroupを検索
+	err := tx.Where("name = ?", name).First(&workTypeGroup).Error
+	if err == nil {
+		return &workTypeGroup, nil
+	}
+
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, fmt.Errorf("WorkTypeGroup検索エラー: %w", err)
+	}
+
+	// 新規作成
+	workTypeGroup = domain.WorkTypeGroup{
+		Name: name,
+	}
+
+	if err := tx.Create(&workTypeGroup).Error; err != nil {
+		return nil, fmt.Errorf("WorkTypeGroup作成エラー: %w", err)
+	}
+
+	// WorkTypeWordも作成（表記ゆれとして同じ名前を登録）
+	workTypeWord := &domain.WorkTypeWord{
+		WorkTypeGroupID: workTypeGroup.WorkTypeGroupID,
+		Word:            name,
+	}
+
+	if err := tx.Create(workTypeWord).Error; err != nil {
+		return nil, fmt.Errorf("WorkTypeWord作成エラー: %w", err)
+	}
+
+	return &workTypeGroup, nil
 }
 
 // GetEmailByID はIDでメールを取得します
