@@ -122,6 +122,69 @@ func TestEmailStoreUseCaseImpl_SaveEmailAnalysisResult(t *testing.T) {
 	}
 }
 
+func TestEmailStoreUseCaseImpl_CheckEmailExists(t *testing.T) {
+	tests := []struct {
+		name          string
+		setupMock     func(*MockEmailStoreRepository)
+		input         string
+		expected      bool
+		expectedError string
+	}{
+		{
+			name: "正常系_メール存在",
+			setupMock: func(mockRepo *MockEmailStoreRepository) {
+				mockRepo.On("EmailExists", mock.Anything, "existing-email-id").Return(true, nil).Once()
+			},
+			input:         "existing-email-id",
+			expected:      true,
+			expectedError: "",
+		},
+		{
+			name: "正常系_メール存在しない",
+			setupMock: func(mockRepo *MockEmailStoreRepository) {
+				mockRepo.On("EmailExists", mock.Anything, "non-existing-email-id").Return(false, nil).Once()
+			},
+			input:         "non-existing-email-id",
+			expected:      false,
+			expectedError: "",
+		},
+		{
+			name: "異常系_空のメールID",
+			setupMock: func(mockRepo *MockEmailStoreRepository) {
+				// モックの設定なし（呼び出されない）
+			},
+			input:         "",
+			expected:      false,
+			expectedError: "メールIDが空です",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			mockRepo := new(MockEmailStoreRepository)
+			tt.setupMock(mockRepo)
+			useCase := NewEmailStoreUseCase(mockRepo)
+			ctx := context.Background()
+
+			// Act
+			exists, err := useCase.CheckEmailExists(ctx, tt.input)
+
+			// Assert
+			if tt.expectedError == "" {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expected, exists)
+			} else {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError)
+				assert.False(t, exists)
+			}
+
+			mockRepo.AssertExpectations(t)
+		})
+	}
+}
+
 func TestEmailStoreUseCaseImpl_CheckKeywordExists(t *testing.T) {
 	tests := []struct {
 		name          string
