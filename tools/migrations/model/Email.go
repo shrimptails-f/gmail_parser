@@ -7,7 +7,7 @@ import (
 // Email（メール基本情報）
 type Email struct {
 	ID           uint      `gorm:"primaryKey;autoIncrement"` // オートインクリメントID
-	GmailID      string    `gorm:"size:32;index"`            // GメールID
+	GmailID      string    `gorm:"size:255;index"`           // GメールID
 	Subject      string    `gorm:"type:text;not null"`       // 件名
 	SenderName   string    `gorm:"size:255"`                 // 差出人名
 	SenderEmail  string    `gorm:"size:255;index"`           // メールアドレス
