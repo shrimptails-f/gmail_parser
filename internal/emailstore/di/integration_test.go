@@ -24,6 +24,7 @@ func TestEmailStoreIntegration_SaveEmailAnalysisResult(t *testing.T) {
 	err = db.DB.AutoMigrate(
 		&model.KeywordGroup{},
 		&model.KeyWord{},
+		&model.KeywordGroupWordLink{},
 		&model.PositionGroup{},
 		&model.PositionWord{},
 		&model.WorkTypeGroup{},

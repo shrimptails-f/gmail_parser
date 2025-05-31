@@ -58,6 +58,7 @@ func (m *MockEmailStoreRepository) GetEmailByGmailId(ctx context.Context, gmail_
 }
 
 func TestEmailStoreUseCaseImpl_SaveEmailAnalysisResult(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name          string
 		setupMock     func(*MockEmailStoreRepository)
@@ -133,6 +134,7 @@ func TestEmailStoreUseCaseImpl_SaveEmailAnalysisResult(t *testing.T) {
 }
 
 func TestEmailStoreUseCaseImpl_CheckEmailExists(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name          string
 		setupMock     func(*MockEmailStoreRepository)
@@ -196,6 +198,7 @@ func TestEmailStoreUseCaseImpl_CheckEmailExists(t *testing.T) {
 }
 
 func TestEmailStoreUseCaseImpl_CheckKeywordExists(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name          string
 		setupMock     func(*MockEmailStoreRepository)
@@ -206,7 +209,7 @@ func TestEmailStoreUseCaseImpl_CheckKeywordExists(t *testing.T) {
 		{
 			name: "正常系_キーワード存在",
 			setupMock: func(mockRepo *MockEmailStoreRepository) {
-				mockRepo.On("KeywordExists", mock.Anything, "Go").Return(true, nil).Once()
+				mockRepo.On("KeywordExists", "Go").Return(true, nil).Once()
 			},
 			input:         "Go",
 			expected:      true,
@@ -215,7 +218,7 @@ func TestEmailStoreUseCaseImpl_CheckKeywordExists(t *testing.T) {
 		{
 			name: "正常系_キーワード存在しない",
 			setupMock: func(mockRepo *MockEmailStoreRepository) {
-				mockRepo.On("KeywordExists", mock.Anything, "Java").Return(false, nil).Once()
+				mockRepo.On("KeywordExists", "Java").Return(false, nil).Once()
 			},
 			input:         "Java",
 			expected:      false,
@@ -259,6 +262,7 @@ func TestEmailStoreUseCaseImpl_CheckKeywordExists(t *testing.T) {
 }
 
 func TestEmailStoreUseCaseImpl_CheckPositionExists(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name          string
 		setupMock     func(*MockEmailStoreRepository)
@@ -322,6 +326,7 @@ func TestEmailStoreUseCaseImpl_CheckPositionExists(t *testing.T) {
 }
 
 func TestEmailStoreUseCaseImpl_CheckWorkTypeExists(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name          string
 		setupMock     func(*MockEmailStoreRepository)

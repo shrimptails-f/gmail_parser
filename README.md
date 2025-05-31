@@ -160,7 +160,7 @@ export OPENAI_API_KEY="sk-your-openai-api-key"
 すべてのパッケージのテストを実行するには、以下のコマンドを使用します：
 
 ```bash
-go test ./...
+go test ./... -count=1
 ```
 
 ## エラーがあるテストをスキップする

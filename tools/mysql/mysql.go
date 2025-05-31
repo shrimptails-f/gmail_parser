@@ -118,7 +118,7 @@ func createMySQLDatabase(dbName string) (err error) {
 	}()
 
 	// テスト用のDBを作成
-	if err = db.Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s", dbName)).Error; err != nil {
+	if err = db.Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s`", dbName)).Error; err != nil {
 		return fmt.Errorf("failed to create database: %w", err)
 	}
 
