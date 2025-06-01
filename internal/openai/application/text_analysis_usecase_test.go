@@ -156,35 +156,35 @@ func TestTextAnalysisUseCase_AnalyzeTextWithOptions_正常系_オプション付
 	mockTextAnalysisService.AssertExpectations(t)
 }
 
-// func TestTextAnalysisUseCase_DisplayAnalysisResult_正常系_解析結果をターミナルに表示すること(t *testing.T) {
-// 	// Arrange
-// 	mockTextAnalysisService := &MockTextAnalysisService{}
-// 	mockPromptService := &MockPromptService{}
+func TestTextAnalysisUseCase_DisplayAnalysisResult_正常系_解析結果をターミナルに表示すること(t *testing.T) {
+	// Arrange
+	mockTextAnalysisService := &MockTextAnalysisService{}
+	mockPromptService := &MockPromptService{}
 
-// 	useCase := NewTextAnalysisUseCase(mockTextAnalysisService, mockPromptService)
+	useCase := NewTextAnalysisUseCase(mockTextAnalysisService, mockPromptService)
 
-// 	result := &domain.TextAnalysisResult{
-// 		MessageID:  "test-message-id",
-// 		Subject:    "会議の件",
-// 		Summary:    "重要な会議についての連絡",
-// 		Language:   "ja",
-// 		Confidence: 0.95,
-// 		Sentiment: domain.SentimentAnalysis{
-// 			Score:      0.3,
-// 			Label:      "POSITIVE",
-// 			Confidence: 0.8,
-// 		},
-// 		Keywords: []domain.Keyword{
-// 			{Text: "会議", Relevance: 0.9, Count: 2},
-// 			{Text: "重要", Relevance: 0.7, Count: 1},
-// 		},
-// 	}
+	result := &domain.TextAnalysisResult{
+		MessageID:  "test-message-id",
+		Subject:    "会議の件",
+		Summary:    "重要な会議についての連絡",
+		Language:   "ja",
+		Confidence: 0.95,
+		Sentiment: domain.SentimentAnalysis{
+			Score:      0.3,
+			Label:      "POSITIVE",
+			Confidence: 0.8,
+		},
+		Keywords: []domain.Keyword{
+			{Text: "会議", Relevance: 0.9, Count: 2},
+			{Text: "重要", Relevance: 0.7, Count: 1},
+		},
+	}
 
-// 	// Act & Assert
-// 	// この関数は標準出力に表示するため、エラーが発生しないことを確認
-// 	err := useCase.DisplayAnalysisResult(result)
-// 	assert.NoError(t, err)
-// }
+	// Act & Assert
+	// この関数は標準出力に表示するため、エラーが発生しないことを確認
+	err := useCase.DisplayAnalysisResult(result)
+	assert.NoError(t, err)
+}
 
 func TestTextAnalysisUseCase_AnalyzeEmailTextMultiple_正常系_複数案件を含むメールを解析すること(t *testing.T) {
 	// Arrange

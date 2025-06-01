@@ -45,10 +45,10 @@ func (u *GmailAuthUseCaseImpl) AuthenticateGmail(ctx context.Context, config dom
 	}
 
 	// 認証情報を保存
-	// if err := u.gmailAuthService.SaveCredentials(config.CredentialsFolder, config.UserID, result.Credential); err != nil {
-	// 保存に失敗しても認証結果は返す（警告レベル）
-	// 実際の実装ではログに記録する
-	// }
+	if err := u.gmailAuthService.SaveCredentials(config.CredentialsFolder, config.UserID, result.Credential); err != nil {
+		// 保存に失敗しても認証結果は返す（警告レベル）
+		// 実際の実装ではログに記録する
+	}
 
 	return result, nil
 }

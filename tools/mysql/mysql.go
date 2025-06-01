@@ -78,21 +78,13 @@ func CreateNewTestDB() (*MySQL, func() error, error) {
 		dbName,
 	)
 
-	var gormLogger logger.Interface
-	// CIはクエリログが邪魔なので出力しない。
-	if os.Getenv("APP") == "ci" {
-		gormLogger = logger.Default.LogMode(logger.Silent)
-	} else {
-		gormLogger = logger.Default
-	}
-
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
-		Logger: gormLogger,
-	})
+	// 作成したDBに接続
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
+	// 作成したDBを削除
 	cleanUp := func() error {
 		err := deleteMySQLDatabase(dbName)
 		if err != nil {

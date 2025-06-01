@@ -119,7 +119,7 @@ type EmailProjectResponse struct {
 	EmailType       string   `json:"メール区分"`
 	ProjectName     string   `json:"案件名"`
 	Tasks           []string `json:"業務"`
-	StartDates      []string `json:"開始時期"`
+	StartDates      []string `json:"入場時期・開始時期"`
 	EndDate         string   `json:"終了時期"`
 	WorkLocation    string   `json:"勤務場所"`
 	SalaryFrom      int      `json:"単価FROM"`

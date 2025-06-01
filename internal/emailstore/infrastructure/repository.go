@@ -354,6 +354,16 @@ func (r *EmailStoreRepositoryImpl) saveWorkTypesMultiple(tx *gorm.DB, emailID ui
 	return nil
 }
 
+// createTechnologiesText は技術要素のカンマ区切り文字列を作成します
+func (r *EmailStoreRepositoryImpl) createTechnologiesText(result *openaidomain.EmailAnalysisResult) string {
+	var technologies []string
+	technologies = append(technologies, result.Languages...)
+	technologies = append(technologies, result.Frameworks...)
+	technologies = append(technologies, result.RequiredSkillsMust...)
+	technologies = append(technologies, result.RequiredSkillsWant...)
+	return strings.Join(technologies, ",")
+}
+
 // saveEntryTimings は入場時期を保存します
 func (r *EmailStoreRepositoryImpl) saveEntryTimings(tx *gorm.DB, emailProjectID uint, startPeriods []string) error {
 	for _, period := range startPeriods {
