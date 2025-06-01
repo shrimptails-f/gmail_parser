@@ -1,0 +1,40 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "テーブル削除",
+            "type": "shell",
+            "command": "migration-drop"
+        },
+        {
+            "label": "テーブル作成",
+            "type": "shell",
+            "command": "migration-create"
+        },
+        {
+            "label": "テーブル削除→作成",
+            "type": "shell",
+            "command": "migration-fresh"
+        },
+        {
+            "label": "gmail認証",
+            "type": "shell",
+            "command": "gmail-aut"
+        },
+        {
+            "label": "gmail認証確認",
+            "type": "shell",
+            "command": "gmail-service"
+        },
+        {
+            "label": "gmail接続確認",
+            "type": "shell",
+            "command": "gmail-messages"
+        },
+        {
+            "label": "gmail取得",
+            "type": "shell",
+            "command": "gmail-messages-by-label"
+        },
+    ]
+}
