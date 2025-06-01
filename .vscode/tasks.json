@@ -4,37 +4,37 @@
         {
             "label": "テーブル削除",
             "type": "shell",
-            "command": "migration-drop"
+            "command": "task migration-drop"
         },
         {
             "label": "テーブル作成",
             "type": "shell",
-            "command": "migration-create"
+            "command": "task migration-create"
         },
         {
-            "label": "テーブル削除→作成",
+            "label": "テーブルリフレッシュ(削除→作成)",
             "type": "shell",
-            "command": "migration-fresh"
+            "command": "task migration-fresh"
         },
         {
             "label": "gmail認証",
             "type": "shell",
-            "command": "gmail-aut"
+            "command": "task gmail-auth"
         },
         {
             "label": "gmail認証確認",
             "type": "shell",
-            "command": "gmail-service"
+            "command": "task gmail-service"
         },
         {
             "label": "gmail接続確認",
             "type": "shell",
-            "command": "gmail-messages"
+            "command": "task gmail-messages"
         },
         {
             "label": "gmail取得",
             "type": "shell",
-            "command": "gmail-messages-by-label"
+            "command": "task gmail-messages-by-label"
         },
     ]
 }
