@@ -286,6 +286,14 @@ func getGmailMessagesByLabel(ctx context.Context, l *logger.Logger, labelPath st
 	return nil
 }
 
+// truncateString は文字列を指定された長さで切り詰めます
+func truncateString(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
+}
+
 // getClientSecretPath はclient-secret.jsonファイルのパスを取得します
 func getClientSecretPath() string {
 	// 環境変数から取得
@@ -360,6 +368,26 @@ func analyzeEmailMessage(ctx context.Context, message *domain.GmailMessage) erro
 		return fmt.Errorf("複数案件DB保存エラー: %w", err)
 	}
 
+	return nil
+}
+
+// saveEmailAnalysisResult はメール分析結果をDBに保存します
+func saveEmailAnalysisResult(ctx context.Context, result *openaidomain.EmailAnalysisResult) error {
+	// MySQL接続を作成
+	mysqlConn, err := mysql.New()
+	if err != nil {
+		return fmt.Errorf("MySQL接続エラー: %w", err)
+	}
+
+	// EmailStoreUseCaseを作成
+	emailStoreUseCase := emailstoredi.ProvideEmailStoreDependencies(mysqlConn.DB)
+
+	// メール分析結果を保存
+	if err := emailStoreUseCase.SaveEmailAnalysisResult(ctx, result); err != nil {
+		return fmt.Errorf("メール保存エラー: %w", err)
+	}
+
+	fmt.Printf("メール分析結果をDBに保存しました: %s\n", result.GmailID)
 	return nil
 }
 
@@ -493,7 +521,7 @@ func convertToProjectAnalysisResult(result *openaidomain.TextAnalysisResult) ope
 				project.EndPeriod = emailProject.EndDate
 			}
 
-			// 開始時期
+			// 入場時期・開始時期
 			project.StartPeriod = emailProject.StartDates
 
 			// 言語
@@ -566,8 +594,8 @@ func convertToProjectAnalysisResult(result *openaidomain.TextAnalysisResult) ope
 				project.EndPeriod = endDate
 			}
 
-			// 開始時期
-			if startDates, ok := emailProject["開始時期"]; ok {
+			// 入場時期・開始時期
+			if startDates, ok := emailProject["入場時期・開始時期"]; ok {
 				if startDatesArray, ok := startDates.([]interface{}); ok {
 					for _, startDate := range startDatesArray {
 						if startDateStr, ok := startDate.(string); ok && startDateStr != "" {

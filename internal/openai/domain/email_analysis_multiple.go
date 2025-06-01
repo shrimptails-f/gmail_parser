@@ -26,7 +26,7 @@ type EmailAnalysisMultipleResult struct {
 // ProjectAnalysisResult は案件分析結果のドメインモデルです
 type ProjectAnalysisResult struct {
 	ProjectName         string   `json:"案件名"`
-	StartPeriod         []string `json:"開始時期"`
+	StartPeriod         []string `json:"入場時期・開始時期"`
 	EndPeriod           string   `json:"終了時期"`
 	WorkLocation        string   `json:"勤務場所"`
 	PriceFrom           *int     `json:"単価FROM"`

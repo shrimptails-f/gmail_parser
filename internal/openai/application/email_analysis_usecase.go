@@ -66,7 +66,7 @@ func (u *EmailAnalysisUseCaseImpl) DisplayEmailAnalysisResult(result *domain.Ema
 	fmt.Printf("\"メール区分\": \"%s\"\n", result.MailCategory)
 
 	// 配列の表示
-	fmt.Printf("\"開始時期\": %s\n", formatStringArray(result.StartPeriod))
+	fmt.Printf("\"入場時期・開始時期\": %s\n", formatStringArray(result.StartPeriod))
 	fmt.Printf("\"終了時期\": \"%s\"\n", result.EndPeriod)
 	fmt.Printf("\"勤務場所\": \"%s\"\n", result.WorkLocation)
 

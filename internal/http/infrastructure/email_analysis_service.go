@@ -84,7 +84,7 @@ func (s *EmailAnalysisServiceImpl) AnalyzeEmail(ctx context.Context, request *do
 	// JSONをパース
 	var analysisData struct {
 		MailCategory        string   `json:"メール区分"`
-		StartPeriod         []string `json:"開始時期"`
+		StartPeriod         []string `json:"入場時期・開始時期"`
 		EndPeriod           string   `json:"終了時期"`
 		WorkLocation        string   `json:"勤務場所"`
 		PriceFrom           *int     `json:"単価FROM"`
