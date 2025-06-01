@@ -84,3 +84,25 @@ tasks:
       - go test -tags=integration -cover -coverprofile=coverage.out ./...
       - go tool cover -html=coverage.out -o coverage.html
       - rm coverage.out
+
+  gmail-auth:
+    desc: "Gメール認証を行う"
+    cmds:
+      - go run ./cmd/gmail_auth/ gmail-auth
+
+  gmail-service:
+    desc: "Gメール認証を行う"
+    cmds:
+      - go run ./cmd/gmail_auth/ gmail-service
+
+  gmail-messages:
+    desc: "Gメール取得 動作確認"
+    cmds:
+      - go run ./cmd/gmail_auth/ gmail-messages
+
+  gmail-messages-by-label:
+    desc: "Gメール取得を行い AIで字句解析を行い DBに保存する"
+    env:
+      LABEL: "{{.LABEL}}"
+    cmds:
+      - go run ./cmd/gmail_auth/main.go gmail-messages-by-label "$LABEL"
