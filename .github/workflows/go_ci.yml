@@ -20,6 +20,13 @@ jobs:
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
+      env:
+        MYSQL_USER: root
+        MYSQL_PASSWORD: password
+        DB_HOST: 127.0.0.1 # GitHub Actionsのサービスコンテナには127.0.0.1からアクセスします
+        DB_PORT: 3306
+        MYSQL_DATABASE: development
+        MYSQL_TEST_DATABASE: test
     
     strategy:
       matrix:
