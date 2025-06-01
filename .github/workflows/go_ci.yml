@@ -7,7 +7,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
-    services:  # ← ◎ 正しくは job の中に書く
+    services:
       mysql:
         image: mysql:8.0
         env:
