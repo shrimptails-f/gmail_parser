@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -30,7 +29,7 @@ func NewGmailAuthService() GmailAuthService {
 // Authenticate はGmail認証を実行します
 func (s *gmailAuthService) Authenticate(ctx context.Context, config domain.GmailAuthConfig) (*domain.GmailAuthResult, error) {
 	// client-secret.jsonファイルを読み込み
-	clientSecretData, err := ioutil.ReadFile(config.ClientSecretPath)
+	clientSecretData, err := os.ReadFile(config.ClientSecretPath)
 	if err != nil {
 		return nil, fmt.Errorf("client-secret.jsonファイルの読み込みに失敗しました: %w", err)
 	}
@@ -85,7 +84,7 @@ func (s *gmailAuthService) CreateGmailService(ctx context.Context, credential do
 	// Gmail APIサービスを作成
 	service, err := gmail.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
-		return nil, fmt.Errorf("Gmail APIサービスの作成に失敗しました: %w", err)
+		return nil, fmt.Errorf("gmail APIサービスの作成に失敗しました: %w", err)
 	}
 
 	return service, nil
@@ -101,7 +100,7 @@ func (s *gmailAuthService) LoadCredentials(credentialsFolder, userID string) (*d
 	}
 
 	// ファイルを読み込み
-	data, err := ioutil.ReadFile(tokenPath)
+	data, err := os.ReadFile(tokenPath)
 	if err != nil {
 		return nil, fmt.Errorf("認証情報ファイルの読み込みに失敗しました: %w", err)
 	}
@@ -146,7 +145,7 @@ func (s *gmailAuthService) SaveCredentials(credentialsFolder, userID string, cre
 
 	// ファイルに保存
 	tokenPath := filepath.Join(credentialsFolder, fmt.Sprintf("token_%s.json", userID))
-	if err := ioutil.WriteFile(tokenPath, data, 0600); err != nil {
+	if err := os.WriteFile(tokenPath, data, 0600); err != nil {
 		return fmt.Errorf("認証情報ファイルの保存に失敗しました: %w", err)
 	}
 

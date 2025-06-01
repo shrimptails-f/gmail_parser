@@ -6,7 +6,6 @@ import (
 	"business/internal/gmail/domain"
 	"context"
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -27,9 +26,10 @@ func TestGmailAuthService_SaveAndLoadCredentials(t *testing.T) {
 	service := NewGmailAuthService()
 
 	// テスト用の一時ディレクトリを作成
-	tempDir, err := ioutil.TempDir("", "gmail_auth_test")
-	assert.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir, err := os.MkdirTemp("", "gmail_auth_test")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
 
 	// テストデータ
 	userID := "test_user"
@@ -66,7 +66,10 @@ func TestGmailAuthService_LoadCredentials_FileNotExists(t *testing.T) {
 	service := NewGmailAuthService()
 
 	// テスト用の一時ディレクトリを作成
-	tempDir, err := ioutil.TempDir("", "gmail_auth_test")
+	tempDir, err := os.MkdirTemp("", "gmail_auth_test")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
 	assert.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
@@ -82,14 +85,17 @@ func TestGmailAuthService_LoadCredentials_InvalidJSON(t *testing.T) {
 	service := NewGmailAuthService()
 
 	// テスト用の一時ディレクトリを作成
-	tempDir, err := ioutil.TempDir("", "gmail_auth_test")
+	tempDir, err := os.MkdirTemp("", "gmail_auth_test")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
 	assert.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
 	// 無効なJSONファイルを作成
 	userID := "test_user"
 	tokenPath := filepath.Join(tempDir, "token_test_user.json")
-	err = ioutil.WriteFile(tokenPath, []byte("invalid json"), 0600)
+	err = os.WriteFile(tokenPath, []byte("invalid json"), 0600)
 	assert.NoError(t, err)
 
 	// 無効なJSONファイルを読み込み
@@ -104,7 +110,10 @@ func TestGmailAuthService_SaveCredentials_DirectoryCreation(t *testing.T) {
 	service := NewGmailAuthService()
 
 	// テスト用の一時ディレクトリを作成
-	tempDir, err := ioutil.TempDir("", "gmail_auth_test")
+	tempDir, err := os.MkdirTemp("", "gmail_auth_test")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
 	assert.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
@@ -184,13 +193,16 @@ func TestGmailAuthService_Authenticate_InvalidClientSecret(t *testing.T) {
 	service := NewGmailAuthService()
 
 	// テスト用の一時ディレクトリを作成
-	tempDir, err := ioutil.TempDir("", "gmail_auth_test")
+	tempDir, err := os.MkdirTemp("", "gmail_auth_test")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
 	assert.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
 	// 無効なclient-secret.jsonファイルを作成
 	clientSecretPath := filepath.Join(tempDir, "client-secret.json")
-	err = ioutil.WriteFile(clientSecretPath, []byte("invalid json"), 0600)
+	err = os.WriteFile(clientSecretPath, []byte("invalid json"), 0600)
 	assert.NoError(t, err)
 
 	config := domain.GmailAuthConfig{
@@ -218,7 +230,10 @@ func TestGmailAuthService_SaveCredentials_JSONFormat(t *testing.T) {
 	service := NewGmailAuthService()
 
 	// テスト用の一時ディレクトリを作成
-	tempDir, err := ioutil.TempDir("", "gmail_auth_test")
+	tempDir, err := os.MkdirTemp("", "gmail_auth_test")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
 	assert.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
@@ -238,7 +253,7 @@ func TestGmailAuthService_SaveCredentials_JSONFormat(t *testing.T) {
 
 	// ファイルの内容を直接読み込んで検証
 	tokenPath := filepath.Join(tempDir, "token_test_user.json")
-	data, err := ioutil.ReadFile(tokenPath)
+	data, err := os.ReadFile(tokenPath)
 	assert.NoError(t, err)
 
 	// JSONをパースして内容を確認

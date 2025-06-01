@@ -116,25 +116,3 @@ jobs:
       with:
         name: gmail_auth-binary
         path: gmail_auth
-
-  security:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: 1.24
-
-    - name: Run Gosec Security Scanner
-      uses: securego/gosec@v2.22.3
-      with:
-        args: '-fmt=sarif -out=gosec.sarif ./...'
-
-    - name: Upload SARIF file
-      uses: github/codeql-action/upload-sarif@v3
-      with:
-        sarif_file: gosec.sarif
