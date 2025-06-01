@@ -11,10 +11,10 @@ jobs:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: test_db
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: test
         ports:
-          - 3306:3306
+          - 13306:3306 # ローカルで3306被りやすいので避ける
         options: >-
           --health-cmd="mysqladmin ping --silent"
           --health-interval=10s
