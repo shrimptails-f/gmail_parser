@@ -22,7 +22,6 @@ jobs:
           --health-retries=5
 
     env:
-    env:
       APP: ci
       # DB設定
       MYSQL_USER: root
