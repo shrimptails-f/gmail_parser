@@ -18,7 +18,11 @@ func TestEmailStoreIntegration_SaveEmailAnalysisResult(t *testing.T) {
 	// テスト用DBの準備
 	db, cleanup, err := mysql.CreateNewTestDB()
 	require.NoError(t, err)
-	defer cleanup()
+	defer func() {
+		if err := cleanup(); err != nil {
+			t.Logf("cleanup error: %v", err)
+		}
+	}()
 
 	// マイグレーションファイルと同じ順序でテーブル作成
 	err = db.DB.AutoMigrate(

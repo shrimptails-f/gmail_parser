@@ -19,7 +19,11 @@ func TestEmailStoreRepositoryImpl_SaveEmail(t *testing.T) {
 	// テスト用DBの準備
 	db, cleanup, err := mysql.CreateNewTestDB()
 	require.NoError(t, err)
-	defer cleanup()
+	defer func() {
+		if err := cleanup(); err != nil {
+			t.Logf("cleanup error: %v", err)
+		}
+	}()
 
 	// テーブル作成
 	err = db.DB.AutoMigrate(
@@ -226,7 +230,11 @@ func TestEmailStoreRepositoryImpl_GetEmailByID(t *testing.T) {
 	// テスト用DBの準備
 	db, cleanup, err := mysql.CreateNewTestDB()
 	require.NoError(t, err)
-	defer cleanup()
+	defer func() {
+		if err := cleanup(); err != nil {
+			t.Logf("cleanup error: %v", err)
+		}
+	}()
 
 	// テーブル作成
 	err = db.DB.AutoMigrate(&domain.Email{})
@@ -289,7 +297,11 @@ func TestEmailStoreRepositoryImpl_EmailExists(t *testing.T) {
 	// テスト用DBの準備
 	db, cleanup, err := mysql.CreateNewTestDB()
 	require.NoError(t, err)
-	defer cleanup()
+	defer func() {
+		if err := cleanup(); err != nil {
+			t.Logf("cleanup error: %v", err)
+		}
+	}()
 
 	// テーブル作成
 	err = db.DB.AutoMigrate(&domain.Email{})
@@ -345,7 +357,11 @@ func TestEmailStoreRepositoryImpl_KeywordExists(t *testing.T) {
 	// テスト用DBの準備
 	db, cleanup, err := mysql.CreateNewTestDB()
 	require.NoError(t, err)
-	defer cleanup()
+	defer func() {
+		if err := cleanup(); err != nil {
+			t.Logf("cleanup error: %v", err)
+		}
+	}()
 
 	// テーブル作成
 	err = db.DB.AutoMigrate(
@@ -402,7 +418,11 @@ func TestEmailStoreRepositoryImpl_PositionExists(t *testing.T) {
 	// テスト用DBの準備
 	db, cleanup, err := mysql.CreateNewTestDB()
 	require.NoError(t, err)
-	defer cleanup()
+	defer func() {
+		if err := cleanup(); err != nil {
+			t.Logf("cleanup error: %v", err)
+		}
+	}()
 
 	// テーブル作成
 	err = db.DB.AutoMigrate(
@@ -460,7 +480,11 @@ func TestEmailStoreRepositoryImpl_WorkTypeExists(t *testing.T) {
 	// テスト用DBの準備
 	db, cleanup, err := mysql.CreateNewTestDB()
 	require.NoError(t, err)
-	defer cleanup()
+	defer func() {
+		if err := cleanup(); err != nil {
+			t.Logf("cleanup error: %v", err)
+		}
+	}()
 
 	// テーブル作成
 	err = db.DB.AutoMigrate(
@@ -518,7 +542,11 @@ func TestEmailStoreRepositoryImpl_DuplicateKeywordHandling(t *testing.T) {
 	// テスト用DBの準備
 	db, cleanup, err := mysql.CreateNewTestDB()
 	require.NoError(t, err)
-	defer cleanup()
+	defer func() {
+		if err := cleanup(); err != nil {
+			t.Logf("cleanup error: %v", err)
+		}
+	}()
 
 	// テーブル作成
 	err = db.DB.AutoMigrate(
@@ -598,7 +626,11 @@ func TestSaveEmail_DuplicateKeywords(t *testing.T) {
 	// テスト用DBの準備
 	db, cleanup, err := mysql.CreateNewTestDB()
 	require.NoError(t, err)
-	defer cleanup()
+	defer func() {
+		if err := cleanup(); err != nil {
+			t.Logf("cleanup error: %v", err)
+		}
+	}()
 
 	err = db.DB.AutoMigrate(
 		model.KeywordGroup{},
@@ -670,7 +702,11 @@ func TestSaveEmail_MultipleEmails(t *testing.T) {
 	// テスト用DBの準備
 	db, cleanup, err := mysql.CreateNewTestDB()
 	require.NoError(t, err)
-	defer cleanup()
+	defer func() {
+		if err := cleanup(); err != nil {
+			t.Logf("cleanup error: %v", err)
+		}
+	}()
 
 	err = db.DB.AutoMigrate(
 		model.KeywordGroup{},
@@ -778,7 +814,11 @@ func TestKeywordGroupWordLink_NewKeywordStructure(t *testing.T) {
 	// テスト用DBの準備
 	db, cleanup, err := mysql.CreateNewTestDB()
 	require.NoError(t, err)
-	defer cleanup()
+	defer func() {
+		if err := cleanup(); err != nil {
+			t.Logf("cleanup error: %v", err)
+		}
+	}()
 
 	// テーブル作成
 	err = db.DB.AutoMigrate(
