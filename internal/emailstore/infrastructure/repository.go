@@ -381,22 +381,22 @@ func (r *EmailStoreRepositoryImpl) saveEntryTimings(tx *gorm.DB, emailProjectID 
 // saveKeywords はキーワード関連のデータを保存します
 func (r *EmailStoreRepositoryImpl) saveKeywords(tx *gorm.DB, result *openaidomain.EmailAnalysisResult, emailId uint) error {
 	// 言語
-	if err := r.saveKeywordsByType(tx, emailId, result.Languages, "LANGUAGE"); err != nil {
+	if err := r.saveKeywordsByType(tx, emailId, result.Languages, "language"); err != nil {
 		return err
 	}
 
 	// フレームワーク
-	if err := r.saveKeywordsByType(tx, emailId, result.Frameworks, "FRAMEWORK"); err != nil {
+	if err := r.saveKeywordsByType(tx, emailId, result.Frameworks, "framework"); err != nil {
 		return err
 	}
 
 	// 必須スキル
-	if err := r.saveKeywordsByType(tx, emailId, result.RequiredSkillsMust, "MUST"); err != nil {
+	if err := r.saveKeywordsByType(tx, emailId, result.RequiredSkillsMust, "must"); err != nil {
 		return err
 	}
 
 	// 希望スキル
-	if err := r.saveKeywordsByType(tx, emailId, result.RequiredSkillsWant, "WANT"); err != nil {
+	if err := r.saveKeywordsByType(tx, emailId, result.RequiredSkillsWant, "want"); err != nil {
 		return err
 	}
 
@@ -411,7 +411,7 @@ func (r *EmailStoreRepositoryImpl) saveKeywordsByType(tx *gorm.DB, emailID uint,
 		}
 
 		// KeywordGroupを取得または作成
-		keywordGroup, err := r.getOrCreateKeywordGroup(tx, keyword)
+		keywordGroup, err := r.getOrCreateKeywordGroup(tx, keyword, keywordType)
 		if err != nil {
 			return fmt.Errorf("KeywordGroup取得/作成エラー: %w", err)
 		}
@@ -430,7 +430,7 @@ func (r *EmailStoreRepositoryImpl) saveKeywordsByType(tx *gorm.DB, emailID uint,
 	return nil
 }
 
-func (r *EmailStoreRepositoryImpl) getOrCreateKeywordGroup(tx *gorm.DB, name string) (*domain.KeywordGroup, error) {
+func (r *EmailStoreRepositoryImpl) getOrCreateKeywordGroup(tx *gorm.DB, name string, keywordType string) (*domain.KeywordGroup, error) {
 	var keywordGroup domain.KeywordGroup
 	var keyWord domain.KeyWord
 
@@ -481,7 +481,7 @@ func (r *EmailStoreRepositoryImpl) getOrCreateKeywordGroup(tx *gorm.DB, name str
 	// グループも単語も存在しない → 新規作成
 	keywordGroup = domain.KeywordGroup{
 		Name: name,
-		Type: "other",
+		Type: keywordType,
 	}
 	if err := tx.Create(&keywordGroup).Error; err != nil {
 		return nil, fmt.Errorf("KeywordGroup作成エラー: %w", err)
