@@ -8,7 +8,7 @@ import (
 type KeywordGroup struct {
 	KeywordGroupID uint   `gorm:"primaryKey;autoIncrement"`
 	Name           string `gorm:"unique;size:255;not null"`
-	Type           string `gorm:"type:enum('language','framework','skill','tool','other');not null"`
+	Type           string `gorm:"type:enum('language','framework','must','want','other');not null"`
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 
