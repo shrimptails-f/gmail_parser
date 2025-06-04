@@ -5,7 +5,6 @@ package infrastructure
 import (
 	"business/internal/emailstore/domain"
 	openaidomain "business/internal/openai/domain"
-	"context"
 )
 
 // EmailStoreRepository はメール保存のリポジトリインターフェースです
@@ -14,13 +13,13 @@ type EmailStoreRepository interface {
 	SaveEmail(result Email) error
 
 	// SaveEmailMultiple は複数案件対応のメール分析結果をデータベースに保存します
-	SaveEmailMultiple(ctx context.Context, result *openaidomain.EmailAnalysisMultipleResult) error
+	SaveEmailMultiple(result *openaidomain.EmailAnalysisMultipleResult) error
 
 	// GetEmailByGmailId はIDでメールを取得します
-	GetEmailByGmailId(ctx context.Context, gmail_id string) (*domain.Email, error)
+	GetEmailByGmailId(gmail_id string) (*domain.Email, error)
 
 	// EmailExists はメールが既に存在するかチェックします
-	EmailExists(ctx context.Context, id string) (bool, error)
+	EmailExists(id string) (bool, error)
 
 	// GetkeywordGroups は引数からまとめて取得します。
 	GetkeywordGroups(name []string) ([]KeywordGroup, error)

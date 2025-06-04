@@ -5,7 +5,6 @@ package infrastructure
 import (
 	"business/internal/emailstore/domain"
 	openaidomain "business/internal/openai/domain"
-	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -82,9 +81,9 @@ func (r *EmailStoreRepositoryImpl) SaveEmail(email Email) error {
 }
 
 // SaveEmailMultiple は複数案件対応のメール分析結果をデータベースに保存します
-func (r *EmailStoreRepositoryImpl) SaveEmailMultiple(ctx context.Context, result *openaidomain.EmailAnalysisMultipleResult) error {
+func (r *EmailStoreRepositoryImpl) SaveEmailMultiple(result *openaidomain.EmailAnalysisMultipleResult) error {
 	// 重複チェック
-	exists, err := r.EmailExists(ctx, result.GmailID)
+	exists, err := r.EmailExists(result.GmailID)
 	if err != nil {
 		return fmt.Errorf("メール存在チェックエラー: %w", err)
 	}
@@ -663,7 +662,7 @@ func (r *EmailStoreRepositoryImpl) getOrCreateWorkTypeGroup(tx *gorm.DB, name st
 }
 
 // GetEmailByGmailId はIDでメールを取得します
-func (r *EmailStoreRepositoryImpl) GetEmailByGmailId(ctx context.Context, gmail_id string) (*domain.Email, error) {
+func (r *EmailStoreRepositoryImpl) GetEmailByGmailId(gmail_id string) (*domain.Email, error) {
 	var email domain.Email
 	err := r.db.Where("gmail_id = ?", gmail_id).First(&email).Error
 	if err != nil {
@@ -676,7 +675,7 @@ func (r *EmailStoreRepositoryImpl) GetEmailByGmailId(ctx context.Context, gmail_
 }
 
 // EmailExists はメールが既に存在するかチェックします
-func (r *EmailStoreRepositoryImpl) EmailExists(ctx context.Context, id string) (bool, error) {
+func (r *EmailStoreRepositoryImpl) EmailExists(id string) (bool, error) {
 	var count int64
 	err := r.db.Model(&domain.Email{}).Where("gmail_id = ?", id).Count(&count).Error
 	if err != nil {

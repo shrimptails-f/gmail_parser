@@ -4,6 +4,7 @@ package domain
 
 import (
 	"errors"
+	"strings"
 	"time"
 )
 
@@ -91,6 +92,24 @@ type GmailMessage struct {
 	To      []string  `json:"to"`
 	Date    time.Time `json:"date"`
 	Body    string    `json:"body"`
+}
+
+// ExtractSenderName は From フィールドから送信者名を抽出します
+func (t GmailMessage) ExtractSenderName() string {
+	if idx := strings.Index(t.From, "<"); idx > 0 {
+		return strings.TrimSpace(t.From[:idx])
+	}
+	return t.From
+}
+
+// ExtractEmailAddress は From フィールドからメールアドレスを抽出します
+func (t GmailMessage) ExtractEmailAddress() string {
+	start := strings.Index(t.From, "<")
+	end := strings.Index(t.From, ">")
+	if start >= 0 && end > start {
+		return t.From[start+1 : end]
+	}
+	return t.From
 }
 
 // GmailInfo はGmailラベル情報のドメインモデルです

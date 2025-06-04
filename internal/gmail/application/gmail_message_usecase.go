@@ -98,7 +98,7 @@ func (u *GmailMessageUseCaseImpl) GetAllMessagesByLabelPathFromToday(ctx context
 	now := time.Now()
 	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	fmt.Printf("メール検索開始 検索日FROM: %v ", todayStart)
-	// todayStart = todayStart.AddDate(0, 0, -4)
+	todayStart = todayStart.AddDate(0, 0, -7)
 
 	// 全メッセージを取得（ページネーションで0件になるまで取得）
 	var allMessages []domain.GmailMessage

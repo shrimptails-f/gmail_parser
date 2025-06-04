@@ -10,13 +10,14 @@ import (
 
 // AnalysisResult は全メール共通の基本情報を表すドメインモデルです
 type AnalysisResult struct {
-	GmailID   string    `json:"gmail_id"`
-	Summary   string    `json:"summary"`
-	Subject   string    `json:"subject"`
-	From      string    `json:"from"`
-	FromEmail string    `json:"from_email"`
-	Date      time.Time `json:"date"`
-	Body      string    `json:"body"`
+	GmailID      string    `json:"gmail_id"`
+	ReceivedDate time.Time `json:"received_date"`
+	Summary      string    `json:"summary"`
+	Subject      string    `json:"subject"`
+	From         string    `json:"from"`
+	FromEmail    string    `json:"from_email"`
+	Date         time.Time `json:"date"`
+	Body         string    `json:"body"`
 
 	Category            string   `json:"メール区分"`
 	ProjectName         string   `json:"案件名"`

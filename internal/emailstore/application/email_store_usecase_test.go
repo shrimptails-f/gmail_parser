@@ -5,7 +5,6 @@ import (
 	"business/internal/emailstore/domain"
 	r "business/internal/emailstore/infrastructure"
 	openaidomain "business/internal/openai/domain"
-	"context"
 	"testing"
 	"time"
 
@@ -23,18 +22,18 @@ func (m *MockEmailStoreRepository) SaveEmail(result r.Email) error {
 	return args.Error(0)
 }
 
-func (m *MockEmailStoreRepository) SaveEmailMultiple(ctx context.Context, result *openaidomain.EmailAnalysisMultipleResult) error {
-	args := m.Called(ctx, result)
+func (m *MockEmailStoreRepository) SaveEmailMultiple(result *openaidomain.EmailAnalysisMultipleResult) error {
+	args := m.Called(result)
 	return args.Error(0)
 }
 
-func (m *MockEmailStoreRepository) GetEmailByGmailId(ctx context.Context, gmail_id string) (*domain.Email, error) {
-	args := m.Called(ctx, gmail_id)
+func (m *MockEmailStoreRepository) GetEmailByGmailId(gmail_id string) (*domain.Email, error) {
+	args := m.Called(gmail_id)
 	return args.Get(0).(*domain.Email), args.Error(1)
 }
 
-func (m *MockEmailStoreRepository) EmailExists(ctx context.Context, id string) (bool, error) {
-	args := m.Called(ctx, id)
+func (m *MockEmailStoreRepository) EmailExists(id string) (bool, error) {
+	args := m.Called(id)
 	return args.Bool(0), args.Error(1)
 }
 
@@ -79,7 +78,7 @@ func TestEmailStoreUseCaseImpl_SaveEmailAnalysisResult(t *testing.T) {
 	}{
 		name: "正常系_新規メール保存成功",
 		setupMock: func(mockRepo *MockEmailStoreRepository) {
-			mockRepo.On("EmailExists", mock.Anything, "test-email-id").Return(false, nil).Once()
+			mockRepo.On("EmailExists", "test-email-id").Return(false, nil).Once()
 
 			mockRepo.On("GetKeywords", mock.Anything).Return([]r.KeyWord{}, nil).Times(4)
 			mockRepo.On("GetkeywordGroups", mock.Anything).Return([]r.KeywordGroup{}, nil).Times(4)
@@ -120,9 +119,7 @@ func TestEmailStoreUseCaseImpl_SaveEmailAnalysisResult(t *testing.T) {
 		mockRepo := new(MockEmailStoreRepository)
 		tt.setupMock(mockRepo)
 		useCase := NewEmailStoreUseCase(mockRepo)
-		ctx := context.Background()
-
-		err := useCase.SaveEmailAnalysisResult(ctx, *tt.input)
+		err := useCase.SaveEmailAnalysisResult(*tt.input)
 
 		if tt.expectedError == "" {
 			assert.NoError(t, err)
@@ -141,12 +138,11 @@ func TestEmailStoreUseCaseImpl_SaveEmailAnalysisResult_SaveEmailFails(t *testing
 	mockRepo := new(MockEmailStoreRepository)
 
 	mockRepo.
-		On("EmailExists", mock.Anything, "test-id").
+		On("EmailExists", "test-id").
 		Return(true, nil).
 		Once()
 
 	useCase := NewEmailStoreUseCase(mockRepo)
-	ctx := context.Background()
 
 	input := domain.AnalysisResult{
 		GmailID: "test-id",
@@ -154,7 +150,7 @@ func TestEmailStoreUseCaseImpl_SaveEmailAnalysisResult_SaveEmailFails(t *testing
 		From:    "山田 花子 <yamada@example.com>",
 	}
 
-	err := useCase.SaveEmailAnalysisResult(ctx, input)
+	err := useCase.SaveEmailAnalysisResult(input)
 
 	assert.NoError(t, err)
 

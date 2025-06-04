@@ -7,10 +7,8 @@ import (
 	r "business/internal/emailstore/infrastructure"
 	openaidomain "business/internal/openai/domain"
 	"errors"
-	"strings"
-
-	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -29,9 +27,9 @@ func NewEmailStoreUseCase(emailStoreRepository r.EmailStoreRepository) EmailStor
 }
 
 // SaveEmailAnalysisResult はメール分析結果を保存します
-func (u *EmailStoreUseCaseImpl) SaveEmailAnalysisResult(ctx context.Context, result domain.AnalysisResult) error {
+func (u *EmailStoreUseCaseImpl) SaveEmailAnalysisResult(result domain.AnalysisResult) error {
 	// メールが既に存在するかチェック
-	isGmailIdExist, err := u.CheckGmailIdExists(ctx, result.GmailID)
+	isGmailIdExist, err := u.CheckGmailIdExists(result.GmailID)
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
 		return fmt.Errorf("メール保存エラー: %w", err)
 	}
@@ -128,14 +126,17 @@ func convertToProjectAnalysisResult(result domain.AnalysisResult, emailKeywordGr
 		Body:         stringPtr(result.Body),
 		Category:     result.Category,
 
-		EmailProject: &emailProject,
+		EmailProject:        &emailProject,
+		EmailKeywordGroups:  emailKeywordGroup,
+		EmailPositionGroups: emailPositionGroup,
+		EmailWorkTypeGroups: emailWorkTypeGroups,
 	}
 
 	return email
 }
 
 // SaveEmailAnalysisMultipleResult は複数案件対応のメール分析結果を保存します
-func (u *EmailStoreUseCaseImpl) SaveEmailAnalysisMultipleResult(ctx context.Context, result *openaidomain.EmailAnalysisMultipleResult) error {
+func (u *EmailStoreUseCaseImpl) SaveEmailAnalysisMultipleResult(result *openaidomain.EmailAnalysisMultipleResult) error {
 	// 入力値チェック
 	if result == nil {
 		return fmt.Errorf("分析結果がnilです")
@@ -147,7 +148,7 @@ func (u *EmailStoreUseCaseImpl) SaveEmailAnalysisMultipleResult(ctx context.Cont
 	}
 
 	// リポジトリを使用してメールを保存
-	if err := u.emailStoreRepository.SaveEmailMultiple(ctx, result); err != nil {
+	if err := u.emailStoreRepository.SaveEmailMultiple(result); err != nil {
 		return fmt.Errorf("複数案件メール保存エラー: %w", err)
 	}
 
@@ -155,12 +156,12 @@ func (u *EmailStoreUseCaseImpl) SaveEmailAnalysisMultipleResult(ctx context.Cont
 }
 
 // CheckGmailIdExists はメールIDの存在チェックを行います
-func (u *EmailStoreUseCaseImpl) CheckGmailIdExists(ctx context.Context, emailId string) (bool, error) {
+func (u *EmailStoreUseCaseImpl) CheckGmailIdExists(emailId string) (bool, error) {
 	if emailId == "" {
 		return false, fmt.Errorf("メールIDが空です")
 	}
 
-	exists, err := u.emailStoreRepository.EmailExists(ctx, emailId)
+	exists, err := u.emailStoreRepository.EmailExists(emailId)
 	if err != nil {
 		return false, fmt.Errorf("メール存在チェックエラー: %w", err)
 	}
@@ -367,7 +368,7 @@ func (u *EmailStoreUseCaseImpl) buildWorkTypeEntities(words []string) []r.EmailW
 }
 
 // // CheckKeywordExists はキーワードの存在チェックを行います
-// func (u *EmailStoreUseCaseImpl) CheckKeywordExists(ctx context.Context, word string) (bool, error) {
+// func (u *EmailStoreUseCaseImpl) CheckKeywordExists( word string) (bool, error) {
 // 	if word == "" {
 // 		return false, fmt.Errorf("キーワードが空です")
 // 	}

@@ -4,6 +4,7 @@ package main
 
 import (
 	emailstoredi "business/internal/emailstore/di"
+	ed "business/internal/emailstore/domain"
 	"business/internal/gmail/application"
 	"business/internal/gmail/domain"
 	"business/internal/gmail/infrastructure"
@@ -336,7 +337,7 @@ func analyzeEmailMessage(ctx context.Context, message *domain.GmailMessage) erro
 	emailStoreUseCase := emailstoredi.ProvideEmailStoreDependencies(mysqlConn.DB)
 
 	// メールIDの存在確認
-	exists, err := emailStoreUseCase.CheckGmailIdExists(ctx, message.ID)
+	exists, err := emailStoreUseCase.CheckGmailIdExists(message.ID)
 	if err != nil {
 		return fmt.Errorf("メール存在確認エラー: %w", err)
 	}
@@ -357,22 +358,24 @@ func analyzeEmailMessage(ctx context.Context, message *domain.GmailMessage) erro
 	textAnalysisService := aiinfra.NewOpenAIService(apiKey)
 	textAnalysisUseCase := aiapp.NewTextAnalysisUseCase(textAnalysisService, promptService)
 
-	// 複数案件対応のメール分析を実行
-	results, err := textAnalysisUseCase.AnalyzeEmailTextMultiple(ctx, message.Body, message.ID, message.Subject)
+	// メール分析を実行
+	results, err := textAnalysisUseCase.AnalyzeEmailText(ctx, *message)
 	if err != nil {
 		return fmt.Errorf("複数案件メール分析エラー: %w", err)
 	}
 
 	// 複数件対応のDB保存処理を実行
-	if err := saveEmailAnalysisMultipleResults(ctx, message, results); err != nil {
-		return fmt.Errorf("複数案件DB保存エラー: %w", err)
+	for _, result := range results {
+		if err := saveEmailAnalysisResult(result); err != nil {
+			return fmt.Errorf("複数案件DB保存エラー: %w", err)
+		}
 	}
 
 	return nil
 }
 
 // saveEmailAnalysisResult はメール分析結果をDBに保存します
-func saveEmailAnalysisResult(ctx context.Context, result *openaidomain.EmailAnalysisResult) error {
+func saveEmailAnalysisResult(result ed.AnalysisResult) error {
 	// MySQL接続を作成
 	mysqlConn, err := mysql.New()
 	if err != nil {
@@ -383,7 +386,7 @@ func saveEmailAnalysisResult(ctx context.Context, result *openaidomain.EmailAnal
 	emailStoreUseCase := emailstoredi.ProvideEmailStoreDependencies(mysqlConn.DB)
 
 	// メール分析結果を保存
-	if err := emailStoreUseCase.SaveEmailAnalysisResult(ctx, result); err != nil {
+	if err := emailStoreUseCase.SaveEmailAnalysisResult(result); err != nil {
 		return fmt.Errorf("メール保存エラー: %w", err)
 	}
 
@@ -446,7 +449,7 @@ func saveEmailAnalysisMultipleResults(ctx context.Context, message *domain.Gmail
 	}
 
 	// 複数案件対応のメール分析結果を保存
-	if err := emailStoreUseCase.SaveEmailAnalysisMultipleResult(ctx, multipleResult); err != nil {
+	if err := emailStoreUseCase.SaveEmailAnalysisMultipleResult(multipleResult); err != nil {
 		return fmt.Errorf("複数案件メール保存エラー: %w", err)
 	}
 
