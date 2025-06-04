@@ -11,7 +11,7 @@ import (
 // EmailStoreRepository はメール保存のリポジトリインターフェースです
 type EmailStoreRepository interface {
 	// SaveEmail はメール分析結果をデータベースに保存します
-	SaveEmail(ctx context.Context, result *openaidomain.EmailAnalysisResult) error
+	SaveEmail(result Email) error
 
 	// SaveEmailMultiple は複数案件対応のメール分析結果をデータベースに保存します
 	SaveEmailMultiple(ctx context.Context, result *openaidomain.EmailAnalysisMultipleResult) error
@@ -22,12 +22,21 @@ type EmailStoreRepository interface {
 	// EmailExists はメールが既に存在するかチェックします
 	EmailExists(ctx context.Context, id string) (bool, error)
 
-	// KeywordExists はキーワードが既に存在するかチェックします
-	KeywordExists(word string) (bool, error)
+	// GetkeywordGroups は引数からまとめて取得します。
+	GetkeywordGroups(name []string) ([]KeywordGroup, error)
 
-	// PositionExists はポジションが既に存在するかチェックします
-	PositionExists(ctx context.Context, word string) (bool, error)
+	// GetKeywords は引数からまとめて取得します。
+	GetKeywords(words []string) ([]KeyWord, error)
+
+	// GetPositionGroups は引数からまとめて取得します。
+	GetPositionGroups(name []string) ([]PositionGroup, error)
+
+	// GetPositionWords はポジションが既に存在するかチェックします
+	GetPositionWords(words []string) ([]PositionWord, error)
 
 	// WorkTypeExists は業務種別が既に存在するかチェックします
-	WorkTypeExists(ctx context.Context, word string) (bool, error)
+	GetWorkTypeWords(words []string) ([]WorkTypeWord, error)
+
+	// GetWorkTypeGroups は業務種別が既に存在するかチェックします
+	GetWorkTypeGroups(words []string) ([]WorkTypeGroup, error)
 }

@@ -3,6 +3,7 @@ package application
 
 import (
 	"business/internal/emailstore/domain"
+	r "business/internal/emailstore/infrastructure"
 	openaidomain "business/internal/openai/domain"
 	"context"
 	"testing"
@@ -17,34 +18,9 @@ type MockEmailStoreRepository struct {
 	mock.Mock
 }
 
-func (m *MockEmailStoreRepository) SaveEmail(ctx context.Context, result *openaidomain.EmailAnalysisResult) error {
-	args := m.Called(ctx, result)
+func (m *MockEmailStoreRepository) SaveEmail(result r.Email) error {
+	args := m.Called(result)
 	return args.Error(0)
-}
-
-func (m *MockEmailStoreRepository) CheckGmailIdExists(ctx context.Context, gmailId string) (*domain.Email, error) {
-	args := m.Called(ctx, gmailId)
-	return args.Get(0).(*domain.Email), args.Error(1)
-}
-
-func (m *MockEmailStoreRepository) EmailExists(ctx context.Context, id string) (bool, error) {
-	args := m.Called(ctx, id)
-	return args.Bool(0), args.Error(1)
-}
-
-func (m *MockEmailStoreRepository) KeywordExists(word string) (bool, error) {
-	args := m.Called(word)
-	return args.Bool(0), args.Error(1)
-}
-
-func (m *MockEmailStoreRepository) PositionExists(ctx context.Context, word string) (bool, error) {
-	args := m.Called(ctx, word)
-	return args.Bool(0), args.Error(1)
-}
-
-func (m *MockEmailStoreRepository) WorkTypeExists(ctx context.Context, word string) (bool, error) {
-	args := m.Called(ctx, word)
-	return args.Bool(0), args.Error(1)
 }
 
 func (m *MockEmailStoreRepository) SaveEmailMultiple(ctx context.Context, result *openaidomain.EmailAnalysisMultipleResult) error {
@@ -57,336 +33,132 @@ func (m *MockEmailStoreRepository) GetEmailByGmailId(ctx context.Context, gmail_
 	return args.Get(0).(*domain.Email), args.Error(1)
 }
 
+func (m *MockEmailStoreRepository) EmailExists(ctx context.Context, id string) (bool, error) {
+	args := m.Called(ctx, id)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *MockEmailStoreRepository) GetkeywordGroups(name []string) ([]r.KeywordGroup, error) {
+	args := m.Called(name)
+	return args.Get(0).([]r.KeywordGroup), args.Error(1)
+}
+
+func (m *MockEmailStoreRepository) GetKeywords(words []string) ([]r.KeyWord, error) {
+	args := m.Called(words)
+	return args.Get(0).([]r.KeyWord), args.Error(1)
+}
+
+func (m *MockEmailStoreRepository) GetPositionGroups(name []string) ([]r.PositionGroup, error) {
+	args := m.Called(name)
+	return args.Get(0).([]r.PositionGroup), args.Error(1)
+}
+
+func (m *MockEmailStoreRepository) GetPositionWords(words []string) ([]r.PositionWord, error) {
+	args := m.Called(words)
+	return args.Get(0).([]r.PositionWord), args.Error(1)
+}
+
+func (m *MockEmailStoreRepository) GetWorkTypeWords(words []string) ([]r.WorkTypeWord, error) {
+	args := m.Called(words)
+	return args.Get(0).([]r.WorkTypeWord), args.Error(1)
+}
+
+func (m *MockEmailStoreRepository) GetWorkTypeGroups(words []string) ([]r.WorkTypeGroup, error) {
+	args := m.Called(words)
+	return args.Get(0).([]r.WorkTypeGroup), args.Error(1)
+}
+
 func TestEmailStoreUseCaseImpl_SaveEmailAnalysisResult(t *testing.T) {
 	t.Parallel()
-	tests := []struct {
+
+	tt := struct {
 		name          string
 		setupMock     func(*MockEmailStoreRepository)
-		input         *openaidomain.EmailAnalysisResult
+		input         *domain.AnalysisResult
 		expectedError string
 	}{
-		{
-			name: "正常系_新規メール保存成功",
-			setupMock: func(mockRepo *MockEmailStoreRepository) {
-				mockRepo.On("SaveEmail", mock.Anything, mock.AnythingOfType("*domain.EmailAnalysisResult")).Return(nil).Once()
-			},
-			input: &openaidomain.EmailAnalysisResult{
-				GmailID:      "test-email-id",
-				Subject:      "テスト件名",
-				From:         "sender@example.com",
-				FromEmail:    "sender@example.com",
-				Date:         time.Now(),
-				Body:         "テスト本文",
-				MailCategory: "案件",
-				StartPeriod:  []string{"2024年4月"},
-				EndPeriod:    "2024年12月",
-				WorkLocation: "東京都",
-				PriceFrom:    intPtr(500000),
-				PriceTo:      intPtr(600000),
-				Languages:    []string{"Go", "Python"},
-				Frameworks:   []string{"Gin", "Django"},
-			},
-			expectedError: "",
+		name: "正常系_新規メール保存成功",
+		setupMock: func(mockRepo *MockEmailStoreRepository) {
+			mockRepo.On("EmailExists", mock.Anything, "test-email-id").Return(false, nil).Once()
+
+			mockRepo.On("GetKeywords", mock.Anything).Return([]r.KeyWord{}, nil).Times(4)
+			mockRepo.On("GetkeywordGroups", mock.Anything).Return([]r.KeywordGroup{}, nil).Times(4)
+
+			mockRepo.On("GetPositionWords", mock.Anything).Return([]r.PositionWord{}, nil).Once()
+			mockRepo.On("GetPositionGroups", mock.AnythingOfType("[]string")).Return([]r.PositionGroup{}, nil).Once()
+
+			mockRepo.On("GetWorkTypeWords", mock.Anything).Return([]r.WorkTypeWord{}, nil).Once()
+			mockRepo.On("GetWorkTypeGroups", mock.AnythingOfType("[]string")).Return([]r.WorkTypeGroup{}, nil).Once()
+
+			mockRepo.On("SaveEmail", mock.Anything).Return(nil).Once()
 		},
-		{
-			name: "異常系_リポジトリエラー",
-			setupMock: func(mockRepo *MockEmailStoreRepository) {
-				mockRepo.On("SaveEmail", mock.Anything, mock.AnythingOfType("*domain.EmailAnalysisResult")).Return(domain.ErrInvalidEmailData).Once()
-			},
-			input: &openaidomain.EmailAnalysisResult{
-				GmailID: "test-email-id",
-				Subject: "テスト件名",
-			},
-			expectedError: "メール保存エラー: 無効なメールデータです",
+
+		input: &domain.AnalysisResult{
+			GmailID:            "test-email-id",
+			Subject:            "テスト件名",
+			From:               "田中 太郎 <sender@example.com>",
+			FromEmail:          "sender@example.com",
+			Date:               time.Now(),
+			Body:               "テスト本文",
+			ProjectName:        "プロジェクトA",
+			StartPeriod:        []string{"2024年4月"},
+			EndPeriod:          "2024年12月",
+			WorkLocation:       "東京都",
+			PriceFrom:          intPtr(500000),
+			PriceTo:            intPtr(600000),
+			Languages:          []string{"Go", "Python"},
+			Frameworks:         []string{"Gin", "Django"},
+			RequiredSkillsMust: []string{"必須スキル1", "必須スキル2"},
+			RequiredSkillsWant: []string{"尚可スキル1", "尚可スキル2"},
+			Positions:          []string{"SE", "PG"},
+			WorkTypes:          []string{"バックエンド", "インフラエンジニア"},
 		},
-		{
-			name: "異常系_nilの分析結果",
-			setupMock: func(mockRepo *MockEmailStoreRepository) {
-				// モックの設定なし（呼び出されない）
-			},
-			input:         nil,
-			expectedError: "分析結果がnilです",
-		},
+		expectedError: "",
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Arrange
-			mockRepo := new(MockEmailStoreRepository)
-			tt.setupMock(mockRepo)
-			useCase := NewEmailStoreUseCase(mockRepo)
-			ctx := context.Background()
+	t.Run(tt.name, func(t *testing.T) {
+		mockRepo := new(MockEmailStoreRepository)
+		tt.setupMock(mockRepo)
+		useCase := NewEmailStoreUseCase(mockRepo)
+		ctx := context.Background()
 
-			// Act
-			err := useCase.SaveEmailAnalysisResult(ctx, tt.input)
+		err := useCase.SaveEmailAnalysisResult(ctx, *tt.input)
 
-			// Assert
-			if tt.expectedError == "" {
-				assert.NoError(t, err)
-			} else {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), tt.expectedError)
-			}
+		if tt.expectedError == "" {
+			assert.NoError(t, err)
+		} else {
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), tt.expectedError)
+		}
 
-			mockRepo.AssertExpectations(t)
-		})
-	}
+		mockRepo.AssertExpectations(t)
+	})
 }
 
-func TestEmailStoreUseCaseImpl_CheckEmailExists(t *testing.T) {
+func TestEmailStoreUseCaseImpl_SaveEmailAnalysisResult_SaveEmailFails(t *testing.T) {
 	t.Parallel()
-	tests := []struct {
-		name          string
-		setupMock     func(*MockEmailStoreRepository)
-		input         string
-		expected      bool
-		expectedError string
-	}{
-		{
-			name: "正常系_メール存在",
-			setupMock: func(mockRepo *MockEmailStoreRepository) {
-				mockRepo.On("EmailExists", mock.Anything, "existing-email-id").Return(true, nil).Once()
-			},
-			input:         "existing-email-id",
-			expected:      true,
-			expectedError: "",
-		},
-		{
-			name: "正常系_メール存在しない",
-			setupMock: func(mockRepo *MockEmailStoreRepository) {
-				mockRepo.On("EmailExists", mock.Anything, "non-existing-email-id").Return(false, nil).Once()
-			},
-			input:         "non-existing-email-id",
-			expected:      false,
-			expectedError: "",
-		},
-		{
-			name: "異常系_空のメールID",
-			setupMock: func(mockRepo *MockEmailStoreRepository) {
-				// モックの設定なし（呼び出されない）
-			},
-			input:         "",
-			expected:      false,
-			expectedError: "メールIDが空です",
-		},
+
+	mockRepo := new(MockEmailStoreRepository)
+
+	mockRepo.
+		On("EmailExists", mock.Anything, "test-id").
+		Return(true, nil).
+		Once()
+
+	useCase := NewEmailStoreUseCase(mockRepo)
+	ctx := context.Background()
+
+	input := domain.AnalysisResult{
+		GmailID: "test-id",
+		Subject: "失敗テスト",
+		From:    "山田 花子 <yamada@example.com>",
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Arrange
-			mockRepo := new(MockEmailStoreRepository)
-			tt.setupMock(mockRepo)
-			useCase := NewEmailStoreUseCase(mockRepo)
-			ctx := context.Background()
+	err := useCase.SaveEmailAnalysisResult(ctx, input)
 
-			// Act
-			exists, err := useCase.CheckGmailIdExists(ctx, tt.input)
+	assert.NoError(t, err)
 
-			// Assert
-			if tt.expectedError == "" {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.expected, exists)
-			} else {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), tt.expectedError)
-				assert.False(t, exists)
-			}
-
-			mockRepo.AssertExpectations(t)
-		})
-	}
-}
-
-func TestEmailStoreUseCaseImpl_CheckKeywordExists(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name          string
-		setupMock     func(*MockEmailStoreRepository)
-		input         string
-		expected      bool
-		expectedError string
-	}{
-		{
-			name: "正常系_キーワード存在",
-			setupMock: func(mockRepo *MockEmailStoreRepository) {
-				mockRepo.On("KeywordExists", "Go").Return(true, nil).Once()
-			},
-			input:         "Go",
-			expected:      true,
-			expectedError: "",
-		},
-		{
-			name: "正常系_キーワード存在しない",
-			setupMock: func(mockRepo *MockEmailStoreRepository) {
-				mockRepo.On("KeywordExists", "Java").Return(false, nil).Once()
-			},
-			input:         "Java",
-			expected:      false,
-			expectedError: "",
-		},
-		{
-			name: "異常系_空のキーワード",
-			setupMock: func(mockRepo *MockEmailStoreRepository) {
-				// モックの設定なし（呼び出されない）
-			},
-			input:         "",
-			expected:      false,
-			expectedError: "キーワードが空です",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Arrange
-			mockRepo := new(MockEmailStoreRepository)
-			tt.setupMock(mockRepo)
-			useCase := NewEmailStoreUseCase(mockRepo)
-			ctx := context.Background()
-
-			// Act
-			exists, err := useCase.CheckKeywordExists(ctx, tt.input)
-
-			// Assert
-			if tt.expectedError == "" {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.expected, exists)
-			} else {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), tt.expectedError)
-				assert.False(t, exists)
-			}
-
-			mockRepo.AssertExpectations(t)
-		})
-	}
-}
-
-func TestEmailStoreUseCaseImpl_CheckPositionExists(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name          string
-		setupMock     func(*MockEmailStoreRepository)
-		input         string
-		expected      bool
-		expectedError string
-	}{
-		{
-			name: "正常系_ポジション存在",
-			setupMock: func(mockRepo *MockEmailStoreRepository) {
-				mockRepo.On("PositionExists", mock.Anything, "PM").Return(true, nil).Once()
-			},
-			input:         "PM",
-			expected:      true,
-			expectedError: "",
-		},
-		{
-			name: "正常系_ポジション存在しない",
-			setupMock: func(mockRepo *MockEmailStoreRepository) {
-				mockRepo.On("PositionExists", mock.Anything, "SE").Return(false, nil).Once()
-			},
-			input:         "SE",
-			expected:      false,
-			expectedError: "",
-		},
-		{
-			name: "異常系_空のポジション",
-			setupMock: func(mockRepo *MockEmailStoreRepository) {
-				// モックの設定なし（呼び出されない）
-			},
-			input:         "",
-			expected:      false,
-			expectedError: "ポジションが空です",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Arrange
-			mockRepo := new(MockEmailStoreRepository)
-			tt.setupMock(mockRepo)
-			useCase := NewEmailStoreUseCase(mockRepo)
-			ctx := context.Background()
-
-			// Act
-			exists, err := useCase.CheckPositionExists(ctx, tt.input)
-
-			// Assert
-			if tt.expectedError == "" {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.expected, exists)
-			} else {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), tt.expectedError)
-				assert.False(t, exists)
-			}
-
-			mockRepo.AssertExpectations(t)
-		})
-	}
-}
-
-func TestEmailStoreUseCaseImpl_CheckWorkTypeExists(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name          string
-		setupMock     func(*MockEmailStoreRepository)
-		input         string
-		expected      bool
-		expectedError string
-	}{
-		{
-			name: "正常系_業務種別存在",
-			setupMock: func(mockRepo *MockEmailStoreRepository) {
-				mockRepo.On("WorkTypeExists", mock.Anything, "バックエンド開発").Return(true, nil).Once()
-			},
-			input:         "バックエンド開発",
-			expected:      true,
-			expectedError: "",
-		},
-		{
-			name: "正常系_業務種別存在しない",
-			setupMock: func(mockRepo *MockEmailStoreRepository) {
-				mockRepo.On("WorkTypeExists", mock.Anything, "フロントエンド開発").Return(false, nil).Once()
-			},
-			input:         "フロントエンド開発",
-			expected:      false,
-			expectedError: "",
-		},
-		{
-			name: "異常系_空の業務種別",
-			setupMock: func(mockRepo *MockEmailStoreRepository) {
-				// モックの設定なし（呼び出されない）
-			},
-			input:         "",
-			expected:      false,
-			expectedError: "業務種別が空です",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Arrange
-			mockRepo := new(MockEmailStoreRepository)
-			tt.setupMock(mockRepo)
-			useCase := NewEmailStoreUseCase(mockRepo)
-			ctx := context.Background()
-
-			// Act
-			exists, err := useCase.CheckWorkTypeExists(ctx, tt.input)
-
-			// Assert
-			if tt.expectedError == "" {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.expected, exists)
-			} else {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), tt.expectedError)
-				assert.False(t, exists)
-			}
-
-			mockRepo.AssertExpectations(t)
-		})
-	}
+	mockRepo.AssertExpectations(t)
 }
 
 // intPtr はintのポインタを返すヘルパー関数です

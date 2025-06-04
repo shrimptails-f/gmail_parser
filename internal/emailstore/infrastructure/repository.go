@@ -25,18 +25,7 @@ func NewEmailStoreRepository(db *gorm.DB) EmailStoreRepository {
 	}
 }
 
-// SaveEmail はメール分析結果をデータベースに保存します
-func (r *EmailStoreRepositoryImpl) SaveEmail(ctx context.Context, result *openaidomain.EmailAnalysisResult) error {
-	// 重複チェック
-	exists, err := r.EmailExists(ctx, result.GmailID)
-	if err != nil {
-		return fmt.Errorf("メール存在チェックエラー: %w", err)
-	}
-	if exists {
-		return domain.ErrEmailAlreadyExists
-	}
-
-	// トランザクション開始
+func (r *EmailStoreRepositoryImpl) SaveEmail(email Email) error {
 	tx := r.db.Begin()
 	if tx.Error != nil {
 		return fmt.Errorf("トランザクション開始エラー: %w", tx.Error)
@@ -47,32 +36,44 @@ func (r *EmailStoreRepositoryImpl) SaveEmail(ctx context.Context, result *openai
 		}
 	}()
 
-	// Emailテーブルに保存
-	body := result.Body
-	email := &domain.Email{
-		GmailID:      result.GmailID,
-		Subject:      result.Subject,
-		SenderName:   result.From,
-		SenderEmail:  result.FromEmail,
-		ReceivedDate: result.Date,
-		Body:         &body,
-		Category:     "案件", // デフォルトで案件として設定
+	// ---------- ネストが深い構造体を作成する。----------
+	// KeywordGroup保存
+	for i := range email.EmailKeywordGroups {
+		kg := &email.EmailKeywordGroups[i].KeywordGroup
+		if err := tx.Create(kg).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+		email.EmailKeywordGroups[i].KeywordGroupID = kg.KeywordGroupID
 	}
 
+	// PositionGroup保存
+	for i := range email.EmailPositionGroups {
+		pg := &email.EmailPositionGroups[i].PositionGroup
+		if err := tx.Create(pg).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+		email.EmailPositionGroups[i].PositionGroupID = pg.PositionGroupID
+	}
+
+	// WorkTypeGroup保存
+	for i := range email.EmailWorkTypeGroups {
+		wtg := &email.EmailWorkTypeGroups[i].WorkTypeGroup
+		if err := tx.Create(wtg).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+		email.EmailWorkTypeGroups[i].WorkTypeGroupID = wtg.WorkTypeGroupID
+	}
+	// ------------------------------------------------------------------------
+
+	// Email保存（最後）
 	if err := tx.Create(&email).Error; err != nil {
 		tx.Rollback()
 		return fmt.Errorf("メール保存エラー: %w", err)
 	}
 
-	// 案件メールの場合、詳細情報を保存
-	if result.MailCategory == "案件" {
-		if err := r.saveProjectDetails(tx, result, *email); err != nil {
-			tx.Rollback()
-			return fmt.Errorf("案件詳細保存エラー: %w", err)
-		}
-	}
-
-	// トランザクションコミット
 	if err := tx.Commit().Error; err != nil {
 		return fmt.Errorf("トランザクションコミットエラー: %w", err)
 	}
@@ -684,32 +685,56 @@ func (r *EmailStoreRepositoryImpl) EmailExists(ctx context.Context, id string) (
 	return count > 0, nil
 }
 
-// KeywordExists はキーワードが既に存在するかチェックします
-func (r *EmailStoreRepositoryImpl) KeywordExists(word string) (bool, error) {
-	var count int64
-	err := r.db.Model(&domain.KeyWord{}).Where("word = ?", word).Count(&count).Error
-	if err != nil {
-		return false, fmt.Errorf("キーワード存在チェックエラー: %w", err)
+// GetkeywordGroups はキーワードグループを name で一括取得します
+func (r *EmailStoreRepositoryImpl) GetkeywordGroups(names []string) ([]KeywordGroup, error) {
+	var groups []KeywordGroup
+	if err := r.db.Where("name IN ?", names).Find(&groups).Error; err != nil {
+		return nil, err
 	}
-	return count > 0, nil
+	return groups, nil
 }
 
-// PositionExists はポジションが既に存在するかチェックします
-func (r *EmailStoreRepositoryImpl) PositionExists(ctx context.Context, word string) (bool, error) {
-	var count int64
-	err := r.db.Model(&domain.PositionWord{}).Where("word = ?", word).Count(&count).Error
-	if err != nil {
-		return false, fmt.Errorf("ポジション存在チェックエラー: %w", err)
+// GetKeywords はキーワードを word で一括取得します
+func (r *EmailStoreRepositoryImpl) GetKeywords(words []string) ([]KeyWord, error) {
+	var keywords []KeyWord
+	if err := r.db.Where("word IN ?", words).Find(&keywords).Error; err != nil {
+		return nil, err
 	}
-	return count > 0, nil
+	return keywords, nil
 }
 
-// WorkTypeExists は業務種別が既に存在するかチェックします
-func (r *EmailStoreRepositoryImpl) WorkTypeExists(ctx context.Context, word string) (bool, error) {
-	var count int64
-	err := r.db.Model(&domain.WorkTypeWord{}).Where("word = ?", word).Count(&count).Error
-	if err != nil {
-		return false, fmt.Errorf("業務種別存在チェックエラー: %w", err)
+// GetPositionGroups はポジショングループを name で一括取得します
+func (r *EmailStoreRepositoryImpl) GetPositionGroups(names []string) ([]PositionGroup, error) {
+	var groups []PositionGroup
+	if err := r.db.Where("name IN ?", names).Find(&groups).Error; err != nil {
+		return nil, err
 	}
-	return count > 0, nil
+	return groups, nil
+}
+
+// GetPositionWords はポジションの表記ゆれを word で一括取得します
+func (r *EmailStoreRepositoryImpl) GetPositionWords(words []string) ([]PositionWord, error) {
+	var positionWords []PositionWord
+	if err := r.db.Where("word IN ?", words).Find(&positionWords).Error; err != nil {
+		return nil, err
+	}
+	return positionWords, nil
+}
+
+// GetWorkTypeWords は業務種別の表記ゆれを word で一括取得します
+func (r *EmailStoreRepositoryImpl) GetWorkTypeWords(words []string) ([]WorkTypeWord, error) {
+	var workTypeWords []WorkTypeWord
+	if err := r.db.Where("word IN ?", words).Find(&workTypeWords).Error; err != nil {
+		return nil, err
+	}
+	return workTypeWords, nil
+}
+
+// GetWorkTypeGroups は業務種別のグループを name で一括取得します
+func (r *EmailStoreRepositoryImpl) GetWorkTypeGroups(names []string) ([]WorkTypeGroup, error) {
+	var groups []WorkTypeGroup
+	if err := r.db.Where("name IN ?", names).Find(&groups).Error; err != nil {
+		return nil, err
+	}
+	return groups, nil
 }
