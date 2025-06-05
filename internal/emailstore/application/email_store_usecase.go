@@ -197,7 +197,6 @@ func (u *EmailStoreUseCaseImpl) buildKeywordEntities(words []string, keywordType
 
 	for _, word := range words {
 		emailKeywordGroup := r.EmailKeywordGroup{
-			Type: keywordType,
 			KeywordGroup: r.KeywordGroup{
 				Type: keywordType,
 				Name: word,

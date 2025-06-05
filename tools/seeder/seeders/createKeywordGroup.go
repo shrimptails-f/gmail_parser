@@ -83,17 +83,17 @@ func CreateKeywordGroup(tx *gorm.DB) error {
 		{
 			KeywordGroupID: 15,
 			Name:           "設計",
-			Type:           "skill",
+			Type:           "must",
 		},
 		{
 			KeywordGroupID: 16,
 			Name:           "テスト",
-			Type:           "skill",
+			Type:           "must",
 		},
 		{
 			KeywordGroupID: 17,
 			Name:           "レビュー",
-			Type:           "skill",
+			Type:           "must",
 		},
 	}
 

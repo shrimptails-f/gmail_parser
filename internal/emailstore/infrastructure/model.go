@@ -78,7 +78,6 @@ type EntryTiming struct {
 type EmailKeywordGroup struct {
 	EmailID        uint      `gorm:"not null;uniqueIndex:idx_email_keyword_type"`
 	KeywordGroupID uint      `gorm:"not null;uniqueIndex:idx_email_keyword_type"`
-	Type           string    `gorm:"type:enum('MUST','WANT','LANGUAGE','FRAMEWORK');not null;uniqueIndex:idx_email_keyword_type"`
 	CreatedAt      time.Time // 登録日時
 
 	// リレーション

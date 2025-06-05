@@ -159,7 +159,6 @@ type EmailKeywordGroup struct {
 	KeywordGroupID   uint
 	KeywordGroupName string // キーワードグループの単語名
 	KeywordWord      string // キーワードの単語名
-	Type             string `gorm:"type:enum('MUST','WANT','LANGUAGE','FRAMEWORK');not null;uniqueIndex:idx_email_keyword_type"`
 
 	Email Email `gorm:"foreignKey:EmailID;references:ID" json:"email"`
 }
