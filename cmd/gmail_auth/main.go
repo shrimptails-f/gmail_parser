@@ -4,7 +4,6 @@ package main
 
 import (
 	emailstoredi "business/internal/emailstore/di"
-	ed "business/internal/emailstore/domain"
 	"business/internal/gmail/application"
 	"business/internal/gmail/domain"
 	"business/internal/gmail/infrastructure"
@@ -276,13 +275,11 @@ func getGmailMessagesByLabel(ctx context.Context, l *logger.Logger, labelPath st
 	fmt.Printf("指定ラベル: %s\n", labelPath)
 	fmt.Printf("取得したメッセージ数: %d\n\n", len(messages))
 
-	for _, message := range messages {
-		// メール分析を実行
-		if err := analyzeEmailMessage(ctx, &message); err != nil {
-			l.Error(fmt.Errorf("メール分析に失敗しました: %w", err))
-		}
-		fmt.Println()
+	// メール分析を実行
+	if err := analyzeEmailMessage(ctx, messages); err != nil {
+		l.Error(fmt.Errorf("メール分析に失敗しました: %w", err))
 	}
+	fmt.Println()
 
 	return nil
 }
@@ -326,27 +323,14 @@ func getClientSecretPath() string {
 }
 
 // analyzeEmailMessage はメールメッセージを分析します
-func analyzeEmailMessage(ctx context.Context, message *domain.GmailMessage) error {
+func analyzeEmailMessage(ctx context.Context, messages []domain.GmailMessage) error {
 	// MySQL接続を作成してメールID存在確認
 	mysqlConn, err := mysql.New()
 	if err != nil {
 		return fmt.Errorf("MySQL接続エラー: %w", err)
 	}
-
 	// EmailStoreUseCaseを作成
 	emailStoreUseCase := emailstoredi.ProvideEmailStoreDependencies(mysqlConn.DB)
-
-	// メールIDの存在確認
-	exists, err := emailStoreUseCase.CheckGmailIdExists(message.ID)
-	if err != nil {
-		return fmt.Errorf("メール存在確認エラー: %w", err)
-	}
-
-	// 既に存在する場合はスキップ
-	if exists {
-		fmt.Printf("メールID %s は既に処理済みです。字句解析をスキップします。\n", message.ID)
-		return nil
-	}
 
 	// サービスを作成
 	promptService := aiinfra.NewFilePromptService("prompts")
@@ -358,39 +342,33 @@ func analyzeEmailMessage(ctx context.Context, message *domain.GmailMessage) erro
 	textAnalysisService := aiinfra.NewOpenAIService(apiKey)
 	textAnalysisUseCase := aiapp.NewTextAnalysisUseCase(textAnalysisService, promptService)
 
-	// メール分析を実行
-	results, err := textAnalysisUseCase.AnalyzeEmailText(ctx, *message)
-	if err != nil {
-		return fmt.Errorf("複数案件メール分析エラー: %w", err)
-	}
+	for _, message := range messages {
+		// メールIDの存在確認
+		exists, err := emailStoreUseCase.CheckGmailIdExists(message.ID)
+		if err != nil {
+			return fmt.Errorf("メール存在確認エラー: %w", err)
+		}
 
-	// 複数件対応のDB保存処理を実行
-	for _, result := range results {
-		if err := saveEmailAnalysisResult(result); err != nil {
-			return fmt.Errorf("複数案件DB保存エラー: %w", err)
+		// 既に存在する場合はスキップ
+		if exists {
+			fmt.Printf("メールID %s は既に処理済みです。字句解析をスキップします。\n", message.ID)
+			continue
+		}
+
+		// メール分析を実行
+		results, err := textAnalysisUseCase.AnalyzeEmailText(ctx, message)
+		if err != nil {
+			return fmt.Errorf("複数案件メール分析エラー: %w", err)
+		}
+
+		// DB保存
+		for _, result := range results {
+			if err := emailStoreUseCase.SaveEmailAnalysisResult(result); err != nil {
+				return fmt.Errorf("複数案件DB保存エラー: %w", err)
+			}
 		}
 	}
 
-	return nil
-}
-
-// saveEmailAnalysisResult はメール分析結果をDBに保存します
-func saveEmailAnalysisResult(result ed.AnalysisResult) error {
-	// MySQL接続を作成
-	mysqlConn, err := mysql.New()
-	if err != nil {
-		return fmt.Errorf("MySQL接続エラー: %w", err)
-	}
-
-	// EmailStoreUseCaseを作成
-	emailStoreUseCase := emailstoredi.ProvideEmailStoreDependencies(mysqlConn.DB)
-
-	// メール分析結果を保存
-	if err := emailStoreUseCase.SaveEmailAnalysisResult(result); err != nil {
-		return fmt.Errorf("メール保存エラー: %w", err)
-	}
-
-	fmt.Printf("メール分析結果をDBに保存しました: %s\n", result.GmailID)
 	return nil
 }
 
@@ -524,7 +502,7 @@ func convertToProjectAnalysisResult(result *openaidomain.TextAnalysisResult) ope
 				project.EndPeriod = emailProject.EndDate
 			}
 
-			// 入場時期・開始時期
+			// 開始時期
 			project.StartPeriod = emailProject.StartDates
 
 			// 言語
@@ -597,8 +575,8 @@ func convertToProjectAnalysisResult(result *openaidomain.TextAnalysisResult) ope
 				project.EndPeriod = endDate
 			}
 
-			// 入場時期・開始時期
-			if startDates, ok := emailProject["入場時期・開始時期"]; ok {
+			// 開始時期
+			if startDates, ok := emailProject["開始時期"]; ok {
 				if startDatesArray, ok := startDates.([]interface{}); ok {
 					for _, startDate := range startDatesArray {
 						if startDateStr, ok := startDate.(string); ok && startDateStr != "" {

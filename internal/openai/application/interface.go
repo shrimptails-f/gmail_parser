@@ -20,7 +20,6 @@ type TextAnalysisUseCase interface {
 	AnalyzeText(ctx context.Context, text string) (*domain.TextAnalysisResult, error)
 	AnalyzeTextWithOptions(ctx context.Context, request *domain.TextAnalysisRequest) (*domain.TextAnalysisResult, error)
 	AnalyzeEmailText(ctx context.Context, email authdomain.GmailMessage) ([]ed.AnalysisResult, error)
-	AnalyzeEmailTextMultiple(ctx context.Context, emailText, messageID, subject string) ([]*domain.TextAnalysisResult, error)
 	DisplayAnalysisResult(result *domain.TextAnalysisResult) error
 }
 

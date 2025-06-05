@@ -97,7 +97,7 @@ func TestEmailStoreUseCaseImpl_SaveEmailAnalysisResult(t *testing.T) {
 			Subject:            "テスト件名",
 			From:               "田中 太郎 <sender@example.com>",
 			FromEmail:          "sender@example.com",
-			Date:               time.Now(),
+			ReceivedDate:       time.Now(),
 			Body:               "テスト本文",
 			ProjectName:        "プロジェクトA",
 			StartPeriod:        []string{"2024年4月"},

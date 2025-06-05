@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"gorm.io/gorm"
 )
@@ -28,15 +27,13 @@ func NewEmailStoreUseCase(emailStoreRepository r.EmailStoreRepository) EmailStor
 
 // SaveEmailAnalysisResult はメール分析結果を保存します
 func (u *EmailStoreUseCaseImpl) SaveEmailAnalysisResult(result domain.AnalysisResult) error {
-	// メールが既に存在するかチェック
-	isGmailIdExist, err := u.CheckGmailIdExists(result.GmailID)
-	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		return fmt.Errorf("メール保存エラー: %w", err)
-	}
-	if isGmailIdExist {
-		fmt.Printf("GメールID %s は既に処理済みです。字句解析をスキップします。\n", result.GmailID)
-		return nil
-	}
+	fmt.Printf("StartPeriod: %v \n", strings.Join(result.StartPeriod, ", "))
+	fmt.Printf("Languages: %v \n", strings.Join(result.Languages, ", "))
+	fmt.Printf("Frameworks: %v \n", strings.Join(result.Frameworks, ", "))
+	fmt.Printf("WorkTypes: %v \n", strings.Join(result.WorkTypes, ", "))
+	fmt.Printf("Positions: %v \n", strings.Join(result.Positions, ", "))
+	fmt.Printf("RequiredSkillsWant: %v \n", strings.Join(result.RequiredSkillsWant, ", "))
+	fmt.Printf("RequiredSkillsMust: %v \n", strings.Join(result.RequiredSkillsMust, ", "))
 
 	// 言語のチェック
 	notExistLanguages, err := u.filterNotExistingWords(result.Languages)
@@ -97,8 +94,8 @@ func (u *EmailStoreUseCaseImpl) SaveEmailAnalysisResult(result domain.AnalysisRe
 	return nil
 }
 
-// convertToProjectAnalysisResult はTextAnalysisResultを案件分析結果に変換します
-func convertToProjectAnalysisResult(result domain.AnalysisResult, emailKeywordGroup []r.EmailKeywordGroup, emailPositionGroup []r.EmailPositionGroup, emailWorkTypeGroups []r.EmailWorkTypeGroup) r.Email {
+// convertToProjectAnalysisResult はDB保存構造体へ詰め替えます
+func convertToProjectAnalysisResult(result domain.AnalysisResult, emailKeywordGroups []r.EmailKeywordGroup, emailPositionGroups []r.EmailPositionGroup, emailWorkTypeGroups []r.EmailWorkTypeGroup) r.Email {
 	sep := ","
 	emailProject := r.EmailProject{
 		ProjectTitle:    stringPtr(result.ProjectName),
@@ -117,18 +114,19 @@ func convertToProjectAnalysisResult(result domain.AnalysisResult, emailKeywordGr
 		RemoteFrequency: result.RemoteWorkFrequency,
 	}
 
+	fmt.Printf("%v \n", result.ReceivedDate)
 	email := r.Email{
 		GmailID:      result.GmailID,
 		Subject:      result.Subject,
 		SenderName:   result.SenderName(),
 		SenderEmail:  result.SenderEmail(),
-		ReceivedDate: time.Time{},
+		ReceivedDate: result.ReceivedDate,
 		Body:         stringPtr(result.Body),
 		Category:     result.Category,
 
 		EmailProject:        &emailProject,
-		EmailKeywordGroups:  emailKeywordGroup,
-		EmailPositionGroups: emailPositionGroup,
+		EmailKeywordGroups:  emailKeywordGroups,
+		EmailPositionGroups: emailPositionGroups,
 		EmailWorkTypeGroups: emailWorkTypeGroups,
 	}
 
@@ -171,6 +169,7 @@ func (u *EmailStoreUseCaseImpl) CheckGmailIdExists(emailId string) (bool, error)
 
 // filterNotExistingWords はキーワード取得または存在確認を行い、作成が必要なキーワード一覧を返します
 func (u *EmailStoreUseCaseImpl) filterNotExistingWords(words []string) ([]string, error) {
+	// TODO: typeをクエリに含める?
 	keywords, err := u.emailStoreRepository.GetKeywords(words)
 	if err != nil {
 		return nil, err
@@ -213,25 +212,19 @@ func (u *EmailStoreUseCaseImpl) filterNotExistingWords(words []string) ([]string
 }
 
 func (u *EmailStoreUseCaseImpl) buildKeywordEntities(words []string, keywordType string) []r.EmailKeywordGroup {
-	now := time.Now()
 	var emailKeywordGroups []r.EmailKeywordGroup
 
 	for _, word := range words {
 		emailKeywordGroup := r.EmailKeywordGroup{
-			CreatedAt: now,
-			Type:      strings.ToUpper(keywordType), // 例: "must" → "MUST"
+			Type: keywordType,
 			KeywordGroup: r.KeywordGroup{
-				Name:      word,
-				CreatedAt: now,
-				UpdatedAt: now,
+				Type: keywordType,
+				Name: word,
 				WordLinks: []r.KeywordGroupWordLink{
 					{
 						KeyWord: r.KeyWord{
-							Word:      word,
-							CreatedAt: now,
-							UpdatedAt: now,
+							Word: word,
 						},
-						CreatedAt: now,
 					},
 				},
 			},
@@ -366,19 +359,5 @@ func (u *EmailStoreUseCaseImpl) buildWorkTypeEntities(words []string) []r.EmailW
 
 	return emailWorkTypeGroups
 }
-
-// // CheckKeywordExists はキーワードの存在チェックを行います
-// func (u *EmailStoreUseCaseImpl) CheckKeywordExists( word string) (bool, error) {
-// 	if word == "" {
-// 		return false, fmt.Errorf("キーワードが空です")
-// 	}
-
-// 	exists, err := u.emailStoreRepository.GetKeywords(words)
-// 	if err != nil {
-// 		return false, fmt.Errorf("キーワード存在チェックエラー: %w", err)
-// 	}
-
-// 	return exists, nil
-// }
 
 func stringPtr(s string) *string { return &s }

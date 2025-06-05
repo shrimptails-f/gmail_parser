@@ -73,6 +73,19 @@ func (r *EmailStoreRepositoryImpl) SaveEmail(email Email) error {
 		return fmt.Errorf("メール保存エラー: %w", err)
 	}
 
+	// // EntryTimingを保存（EmailProjectが存在する場合）
+	// if email.EmailProject != nil && email.EmailProject.EntryTiming != nil {
+	// 	// カンマ区切りの文字列を分割してEntryTimingテーブルに保存
+	// 	entryTimingStr := *email.EmailProject.EntryTiming
+	// 	if entryTimingStr != "" {
+	// 		startPeriods := strings.Split(entryTimingStr, ",")
+	// 		if err := r.saveEntryTimings(tx, email.EmailProject.ID, startPeriods); err != nil {
+	// 			tx.Rollback()
+	// 			return fmt.Errorf("EntryTiming保存エラー: %w", err)
+	// 		}
+	// 	}
+	// }
+
 	if err := tx.Commit().Error; err != nil {
 		return fmt.Errorf("トランザクションコミットエラー: %w", err)
 	}

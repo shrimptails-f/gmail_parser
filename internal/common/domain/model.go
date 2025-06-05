@@ -1,12 +1,6 @@
-// Package domain はメール保存機能のドメイン層を提供します。
-// このファイルはメール保存に関するドメインモデルとビジネスルールを定義します。
 package domain
 
-import (
-	"errors"
-	"strings"
-	"time"
-)
+import "time"
 
 // AnalysisResult は全メール共通の基本情報を表すドメインモデルです
 type AnalysisResult struct {
@@ -16,11 +10,12 @@ type AnalysisResult struct {
 	Subject      string    `json:"subject"`
 	From         string    `json:"from"`
 	FromEmail    string    `json:"from_email"`
+	Date         time.Time `json:"date"`
 	Body         string    `json:"body"`
 
 	Category            string   `json:"メール区分"`
 	ProjectName         string   `json:"案件名"`
-	StartPeriod         []string `json:"開始時期"`
+	StartPeriod         []string `json:"入場時期"`
 	EndPeriod           string   `json:"終了時期"`
 	WorkLocation        string   `json:"勤務場所"`
 	PriceFrom           *int     `json:"単価FROM"`
@@ -33,24 +28,6 @@ type AnalysisResult struct {
 	RequiredSkillsWant  []string `json:"求めるスキル WANT"`
 	RemoteWorkCategory  *string  `json:"リモートワーク区分"`
 	RemoteWorkFrequency *string  `json:"リモートワークの頻度"`
-}
-
-// SenderName は From フィールドから送信者名を抽出します
-func (a *AnalysisResult) SenderName() string {
-	if idx := strings.Index(a.From, "<"); idx > 0 {
-		return strings.TrimSpace(a.From[:idx])
-	}
-	return a.From
-}
-
-// SenderEmail は From フィールドからメールアドレスを抽出します
-func (a *AnalysisResult) SenderEmail() string {
-	start := strings.Index(a.From, "<")
-	end := strings.Index(a.From, ">")
-	if start >= 0 && end > start {
-		return a.From[start+1 : end]
-	}
-	return a.From
 }
 
 // Email は全メール共通の基本情報を表すドメインモデルです
@@ -220,64 +197,4 @@ type EmailWorkTypeGroup struct {
 	// リレーション
 	Email Email `gorm:"foreignKey:EmailID;references:ID" json:"email"`
 	// WorkTypeGroup WorkTypeGroup `gorm:"foreignKey:WorkTypeGroupID;references:WorkTypeGroupID" json:"work_type_group"` // 統合テスト時はコメントアウト
-}
-
-// ドメインエラー
-var (
-	ErrEmailNotFound      = errors.New("メールが見つかりません")
-	ErrEmailAlreadyExists = errors.New("メールが既に存在します")
-	ErrInvalidEmailData   = errors.New("無効なメールデータです")
-)
-
-// TableName はテーブル名を指定します
-func (Email) TableName() string {
-	return "emails"
-}
-
-func (EmailProject) TableName() string {
-	return "email_projects"
-}
-
-func (EmailCandidate) TableName() string {
-	return "email_candidates"
-}
-
-func (EntryTiming) TableName() string {
-	return "entry_timings"
-}
-
-func (KeywordGroup) TableName() string {
-	return "keyword_groups"
-}
-
-func (KeyWord) TableName() string {
-	return "key_words"
-}
-
-func (EmailKeywordGroup) TableName() string {
-	return "email_keyword_groups"
-}
-
-func (PositionGroup) TableName() string {
-	return "position_groups"
-}
-
-func (PositionWord) TableName() string {
-	return "position_words"
-}
-
-func (EmailPositionGroup) TableName() string {
-	return "email_position_groups"
-}
-
-func (WorkTypeGroup) TableName() string {
-	return "work_type_groups"
-}
-
-func (WorkTypeWord) TableName() string {
-	return "work_type_words"
-}
-
-func (EmailWorkTypeGroup) TableName() string {
-	return "email_work_type_groups"
 }

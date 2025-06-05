@@ -4,8 +4,10 @@ package application
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	ed "business/internal/emailstore/domain"
@@ -104,116 +106,82 @@ func (u *TextAnalysisUseCaseImpl) AnalyzeEmailText(ctx context.Context, email gd
 
 	var results []ed.AnalysisResult
 	// 結果にメタデータを設定
-	for _, analysisResul := range response {
-		analysisResul.MessageID = messageID
-		analysisResul.Subject = subject
-		analysisResul.AnalyzedAt = time.Now()
+	for _, analysisResult := range response {
+		analysisResult.MessageID = messageID
+		analysisResult.Subject = subject
+		analysisResult.AnalyzedAt = time.Now()
 
-		project, err := u.convertToProjectAnalysisResult(email, analysisResul)
+		project, err := u.convertToProjectAnalysisResults(email, analysisResult)
 		if err != nil {
 			log.Printf("案件変換失敗: %v", err)
 			continue
 		}
-		results = append(results, project)
+		results = append(results, project...)
 	}
 
 	return results, nil
 }
 
-// convertToProjectAnalysisResult はTextAnalysisResultを案件分析結果に変換します
-func (u *TextAnalysisUseCaseImpl) convertToProjectAnalysisResult(email gd.GmailMessage, result *domain.TextAnalysisResult) (ed.AnalysisResult, error) {
-	// RawResponseからOpenAIの解析結果を取得
-	rawResponse, exists := result.RawResponse["email_project"]
+// convertToProjectAnalysisResults はTextAnalysisResultを案件分析結果に変換します
+func (u *TextAnalysisUseCaseImpl) convertToProjectAnalysisResults(email gd.GmailMessage, result *domain.TextAnalysisResult) ([]ed.AnalysisResult, error) {
+	// openai_responseキーから配列形式のレスポンスを処理
+	openaiResponse, exists := result.RawResponse["openai_response"]
 	if !exists {
-		return ed.AnalysisResult{}, fmt.Errorf("OpenAIのレスポンスに 'email_project' が存在しません。")
+		fmt.Printf("案件変換失敗 (GmailID: %s): \n", email.ID)
+		return []ed.AnalysisResult{}, fmt.Errorf("OpenAIのレスポンスに 'openai_response' が存在しません。")
 	}
-	// openai_service.goのEmailProjectResponseを使用して型アサーション
-	emailProject, ok := rawResponse.(r.EmailProjectResponse)
+
+	// レスポンスの型確認
+	responseStr, ok := openaiResponse.(string)
 	if !ok {
-		return ed.AnalysisResult{}, fmt.Errorf("OpenAIのレスポンスのパースに失敗しました。")
+		fmt.Printf("案件変換失敗 (GmailID: %s): \n", email.ID)
+		return []ed.AnalysisResult{}, fmt.Errorf("openai_responseが文字列ではありません。")
 	}
 
-	fmt.Printf("aaaaa: %v \n", emailProject.SalaryFrom)
-	fmt.Printf("aaaaa: %v \n", emailProject.SalaryTo)
-	fmt.Printf("aaaaa: %v \n", emailProject.Languages)
-	fmt.Printf("aaaaa: %v \n", emailProject.Frameworks)
-	fmt.Printf("aaaaa: %v \n", emailProject.Tasks)
-	fmt.Printf("aaaaa: %v \n", emailProject.RequiredSkills)
-	fmt.Printf("aaaaa: %v \n", emailProject.PreferredSkills)
-
-	project := ed.AnalysisResult{
-		ProjectName:         result.Summary, // 要約を案件名として使用
-		GmailID:             email.ID,
-		Summary:             emailProject.ProjectName,
-		Subject:             email.Subject,
-		From:                email.ExtractSenderName(),
-		FromEmail:           email.ExtractEmailAddress(),
-		Date:                time.Time{},
-		Body:                email.Body,
-		ReceivedDate:        email.Date,
-		Category:            emailProject.EmailType,
-		StartPeriod:         toStringSlice(emailProject.StartDates),
-		EndPeriod:           emailProject.EndDate,
-		WorkLocation:        emailProject.WorkLocation,
-		PriceFrom:           toIntPtr(emailProject.SalaryFrom),
-		PriceTo:             toIntPtr(emailProject.SalaryTo),
-		Languages:           toStringSlice(emailProject.Languages),
-		Frameworks:          toStringSlice(emailProject.Frameworks),
-		Positions:           toStringSlice(emailProject.Positions),
-		WorkTypes:           toStringSlice(emailProject.Tasks),
-		RequiredSkillsMust:  toStringSlice(emailProject.RequiredSkills),
-		RequiredSkillsWant:  toStringSlice(emailProject.PreferredSkills),
-		RemoteWorkCategory:  &emailProject.RemoteWorkType,
-		RemoteWorkFrequency: &emailProject.RemoteFrequency,
+	// JSON配列をパース
+	var analysisResults []ed.AnalysisResult
+	if err := json.Unmarshal([]byte(responseStr), &analysisResults); err != nil {
+		fmt.Printf("案件変換失敗 (GmailID: %s): \n", email.ID)
+		return []ed.AnalysisResult{}, fmt.Errorf("JSON配列のパースに失敗しました: %w", err)
 	}
 
-	return project, nil
-}
-
-// AnalyzeEmailTextMultiple はメール本文をAIで字句解析し、複数案件に対応した結果を返します
-// 1. プロンプトファイルの内容を読み込み
-// 2. プロンプト + メール本文を結合
-// 3. AI APIに送信して複数の解析結果を取得
-func (u *TextAnalysisUseCaseImpl) AnalyzeEmailTextMultiple(ctx context.Context, emailText, messageID, subject string) ([]*domain.TextAnalysisResult, error) {
-	// 空のメール本文チェック
-	if emailText == "" {
-		return nil, domain.ErrEmptyText
+	if len(analysisResults) == 0 {
+		return []ed.AnalysisResult{}, fmt.Errorf("案件情報が見つかりません。(GmailID: %s)", email.ID)
 	}
 
-	// プロンプトファイルの読み込み
-	promptText, err := u.promptService.LoadPrompt("text_analysis_prompt.txt")
-	if err != nil {
-		return nil, fmt.Errorf("プロンプト読み込みエラー: %w", err)
+	var projects []ed.AnalysisResult
+	for _, analysisResult := range analysisResults {
+
+		fmt.Printf("StartDates toStringSlice: %v \n", strings.Join(analysisResult.StartPeriod, ", "))
+
+		project := ed.AnalysisResult{
+			ProjectName:         result.Summary,
+			GmailID:             email.ID,
+			Summary:             analysisResult.ProjectName,
+			Subject:             email.Subject,
+			From:                email.ExtractSenderName(),
+			FromEmail:           email.ExtractEmailAddress(),
+			Body:                email.Body,
+			ReceivedDate:        email.Date,
+			Category:            analysisResult.Category,
+			StartPeriod:         analysisResult.StartPeriod,
+			EndPeriod:           analysisResult.EndPeriod,
+			WorkLocation:        analysisResult.WorkLocation,
+			PriceFrom:           analysisResult.PriceFrom,
+			PriceTo:             analysisResult.PriceTo,
+			Languages:           analysisResult.Languages,
+			Frameworks:          analysisResult.Frameworks,
+			Positions:           analysisResult.Positions,
+			WorkTypes:           analysisResult.WorkTypes,
+			RequiredSkillsMust:  analysisResult.RequiredSkillsMust,
+			RequiredSkillsWant:  analysisResult.RequiredSkillsWant,
+			RemoteWorkCategory:  analysisResult.RemoteWorkCategory,
+			RemoteWorkFrequency: analysisResult.RemoteWorkFrequency,
+		}
+		projects = append(projects, project)
 	}
 
-	// プロンプトとメール本文を結合
-	combinedText := promptText + "\n\n" + emailText
-
-	// テキスト解析リクエストを作成
-	request := domain.NewTextAnalysisRequest(combinedText)
-	request.Metadata["source"] = "email"
-	request.Metadata["message_id"] = messageID
-	request.Metadata["subject"] = subject
-
-	// リクエストの妥当性チェック
-	if err := request.IsValid(); err != nil {
-		return nil, fmt.Errorf("リクエスト妥当性エラー: %w", err)
-	}
-
-	// AI解析実行（複数案件対応）
-	results, err := u.textAnalysisService.AnalyzeTextMultiple(ctx, request)
-	if err != nil {
-		return nil, fmt.Errorf("テキスト解析エラー: %w", err)
-	}
-
-	// 結果にメタデータを設定
-	for _, result := range results {
-		result.MessageID = messageID
-		result.Subject = subject
-		result.AnalyzedAt = time.Now()
-	}
-
-	return results, nil
+	return projects, nil
 }
 
 // DisplayAnalysisResult は解析結果をターミナルに表示します
