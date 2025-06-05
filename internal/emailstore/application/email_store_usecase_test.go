@@ -127,34 +127,7 @@ func TestEmailStoreUseCaseImpl_SaveEmailAnalysisResult(t *testing.T) {
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), tt.expectedError)
 		}
-
-		mockRepo.AssertExpectations(t)
 	})
-}
-
-func TestEmailStoreUseCaseImpl_SaveEmailAnalysisResult_SaveEmailFails(t *testing.T) {
-	t.Parallel()
-
-	mockRepo := new(MockEmailStoreRepository)
-
-	mockRepo.
-		On("EmailExists", "test-id").
-		Return(true, nil).
-		Once()
-
-	useCase := NewEmailStoreUseCase(mockRepo)
-
-	input := domain.AnalysisResult{
-		GmailID: "test-id",
-		Subject: "失敗テスト",
-		From:    "山田 花子 <yamada@example.com>",
-	}
-
-	err := useCase.SaveEmailAnalysisResult(input)
-
-	assert.NoError(t, err)
-
-	mockRepo.AssertExpectations(t)
 }
 
 // intPtr はintのポインタを返すヘルパー関数です

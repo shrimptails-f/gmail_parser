@@ -23,6 +23,7 @@ type Email struct {
 	// 子テーブル
 	EmailProject        *EmailProject        `gorm:"foreignKey:EmailID;references:ID" json:"email_project"`          // 案件情報（1対1）
 	EmailCandidate      *EmailCandidate      `gorm:"foreignKey:EmailID;references:ID" json:"email_candidate"`        // 人材情報（1対1）
+	EntryTimings        []EntryTiming        `gorm:"foreignKey:EmailID;references:ID" json:"entry_timings"`          // 入場時期（1対多）
 	EmailKeywordGroups  []EmailKeywordGroup  `gorm:"foreignKey:EmailID;references:ID" json:"email_keyword_groups"`   // 技術キーワード（1対多）
 	EmailPositionGroups []EmailPositionGroup `gorm:"foreignKey:EmailID;references:ID" json:"email_position_groups"`  // ポジション（1対多）
 	EmailWorkTypeGroups []EmailWorkTypeGroup `gorm:"foreignKey:EmailID;references:ID" json:"email_work_type_groups"` // 業務内容（1対多）
@@ -52,9 +53,6 @@ type EmailProject struct {
 	RemoteFrequency *string   `gorm:"size:255" json:"remote_frequency"`    // リモート頻度
 	CreatedAt       time.Time `json:"created_at"`                          // 作成日時
 	UpdatedAt       time.Time `json:"updated_at"`                          // 更新日時
-
-	// リレーション
-	EntryTimings []EntryTiming `gorm:"foreignKey:EmailProjectID" json:"entry_timings"` // 入場時期（1対多）
 }
 
 // EmailCandidate は人材メール専用の詳細情報を表すドメインモデルです（将来拡張用）
@@ -70,11 +68,10 @@ type EmailCandidate struct {
 
 // EntryTiming は案件の入場時期を正規化管理するドメインモデルです
 type EntryTiming struct {
-	ID             uint      `gorm:"primaryKey" json:"id"`                  // ID
-	EmailProjectID uint      `gorm:"size:32;index" json:"email_project_id"` // 紐づく案件メールID
-	StartDate      string    `gorm:"size:20;not null" json:"start_date"`    // 入場日（例: "2025/06/01"）
-	CreatedAt      time.Time `json:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
+	EmailID   uint      `gorm:"primaryKey" json:"email_id"`                    // ID
+	StartDate string    `gorm:"primaryKey;size:20;not null" json:"start_date"` // 入場日（例: "2025/06/01"）
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
 }
 
 // EmailKeywordGroup はEmailとKeywordGroupの多対多中間テーブルを表すドメインモデルです

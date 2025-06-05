@@ -30,6 +30,5 @@ type EmailProject struct {
 	UpdatedAt       time.Time // 更新日時
 
 	// リレーション
-	Email        Email         `gorm:"foreignKey:EmailID;references:ID"` // 親メール
-	EntryTimings []EntryTiming `gorm:"foreignKey:EmailProjectID"`        // 入場時期（1対多）
+	Email Email `gorm:"foreignKey:EmailID;references:ID"` // 親メール
 }

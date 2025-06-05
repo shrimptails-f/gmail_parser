@@ -5,7 +5,6 @@ package application
 import (
 	"business/internal/emailstore/domain"
 	r "business/internal/emailstore/infrastructure"
-	openaidomain "business/internal/openai/domain"
 	"errors"
 	"fmt"
 	"strings"
@@ -27,13 +26,15 @@ func NewEmailStoreUseCase(emailStoreRepository r.EmailStoreRepository) EmailStor
 
 // SaveEmailAnalysisResult はメール分析結果を保存します
 func (u *EmailStoreUseCaseImpl) SaveEmailAnalysisResult(result domain.AnalysisResult) error {
-	fmt.Printf("StartPeriod: %v \n", strings.Join(result.StartPeriod, ", "))
-	fmt.Printf("Languages: %v \n", strings.Join(result.Languages, ", "))
-	fmt.Printf("Frameworks: %v \n", strings.Join(result.Frameworks, ", "))
-	fmt.Printf("WorkTypes: %v \n", strings.Join(result.WorkTypes, ", "))
-	fmt.Printf("Positions: %v \n", strings.Join(result.Positions, ", "))
-	fmt.Printf("RequiredSkillsWant: %v \n", strings.Join(result.RequiredSkillsWant, ", "))
-	fmt.Printf("RequiredSkillsMust: %v \n", strings.Join(result.RequiredSkillsMust, ", "))
+	// メールが既に存在するかチェック
+	isGmailIdExist, err := u.CheckGmailIdExists(result.GmailID)
+	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
+		return fmt.Errorf("メール保存エラー: %w", err)
+	}
+	if isGmailIdExist {
+		fmt.Printf("GメールID %s は既に処理済みです。字句解析をスキップします。\n", result.GmailID)
+		return nil
+	}
 
 	// 言語のチェック
 	notExistLanguages, err := u.filterNotExistingWords(result.Languages)
@@ -41,7 +42,7 @@ func (u *EmailStoreUseCaseImpl) SaveEmailAnalysisResult(result domain.AnalysisRe
 		fmt.Println("言語の存在確認でエラーが発生しました。")
 		return err
 	}
-	emailKeywordGroups := u.buildKeywordEntities(notExistLanguages, "LANGUAGE")
+	emailKeywordGroups := u.buildKeywordEntities(notExistLanguages, "language")
 
 	// フレームワークのチェック
 	notExistFrameworks, err := u.filterNotExistingWords(result.Frameworks)
@@ -49,7 +50,7 @@ func (u *EmailStoreUseCaseImpl) SaveEmailAnalysisResult(result domain.AnalysisRe
 		fmt.Println("フレームワークの存在確認でエラーが発生しました。")
 		return err
 	}
-	emailKeywordGroups = append(emailKeywordGroups, u.buildKeywordEntities(notExistFrameworks, "FRAMEWORK")...)
+	emailKeywordGroups = append(emailKeywordGroups, u.buildKeywordEntities(notExistFrameworks, "framework")...)
 
 	// 必須スキルのチェック
 	notExistRequiredSkillsMust, err := u.filterNotExistingWords(result.RequiredSkillsMust)
@@ -57,7 +58,7 @@ func (u *EmailStoreUseCaseImpl) SaveEmailAnalysisResult(result domain.AnalysisRe
 		fmt.Println("必須スキルの存在確認でエラーが発生しました。")
 		return err
 	}
-	emailKeywordGroups = append(emailKeywordGroups, u.buildKeywordEntities(notExistRequiredSkillsMust, "MUST")...)
+	emailKeywordGroups = append(emailKeywordGroups, u.buildKeywordEntities(notExistRequiredSkillsMust, "must")...)
 
 	// 尚可のチェック
 	notExistRequiredSkillsWant, err := u.filterNotExistingWords(result.RequiredSkillsWant)
@@ -65,7 +66,7 @@ func (u *EmailStoreUseCaseImpl) SaveEmailAnalysisResult(result domain.AnalysisRe
 		fmt.Println("尚可スキルの存在確認でエラーが発生しました。")
 		return err
 	}
-	emailKeywordGroups = append(emailKeywordGroups, u.buildKeywordEntities(notExistRequiredSkillsWant, "WANT")...)
+	emailKeywordGroups = append(emailKeywordGroups, u.buildKeywordEntities(notExistRequiredSkillsWant, "want")...)
 
 	// ポジションチェック
 	notExistPositionWords, err := u.filterNotExistingPositionWords(result.Positions)
@@ -131,26 +132,6 @@ func convertToProjectAnalysisResult(result domain.AnalysisResult, emailKeywordGr
 	}
 
 	return email
-}
-
-// SaveEmailAnalysisMultipleResult は複数案件対応のメール分析結果を保存します
-func (u *EmailStoreUseCaseImpl) SaveEmailAnalysisMultipleResult(result *openaidomain.EmailAnalysisMultipleResult) error {
-	// 入力値チェック
-	if result == nil {
-		return fmt.Errorf("分析結果がnilです")
-	}
-
-	// 結果の妥当性チェック
-	if err := result.IsValid(); err != nil {
-		return fmt.Errorf("分析結果妥当性チェックエラー: %w", err)
-	}
-
-	// リポジトリを使用してメールを保存
-	if err := u.emailStoreRepository.SaveEmailMultiple(result); err != nil {
-		return fmt.Errorf("複数案件メール保存エラー: %w", err)
-	}
-
-	return nil
 }
 
 // CheckGmailIdExists はメールIDの存在チェックを行います
