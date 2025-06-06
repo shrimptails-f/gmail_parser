@@ -6,37 +6,38 @@ import (
 	"encoding/json"
 	"log"
 
-	"github.com/invopop/jsonschema"
 	"github.com/openai/openai-go"
 	"github.com/openai/openai-go/option"
+	// "github.com/invopop/jsonschema"
 )
 
-type client struct {
-	sdk openai.Client
+type Client struct {
+	sdk *openai.Client
 }
 
-func New(apiKey string) ClientInterFace {
-	return &client{
-		sdk: openai.NewClient(
-			option.WithAPIKey(apiKey),
-		),
+func New(apiKey string) *Client {
+	client := openai.NewClient(
+		option.WithAPIKey(apiKey),
+	)
+	return &Client{
+		sdk: &client,
 	}
 }
 
-func GenerateSchema[T any]() interface{} {
-	reflector := jsonschema.Reflector{
-		AllowAdditionalProperties: false,
-		DoNotReference:            true,
-	}
-	var v T
-	return reflector.Reflect(v)
-}
+// func generateSchema[T any]() interface{} {
+// 	reflector := jsonschema.Reflector{
+// 		AllowAdditionalProperties: false,
+// 		DoNotReference:            true,
+// 	}
+// 	var v T
+// 	return reflector.Reflect(v)
+// }
 
 // type AnalysisResults struct {
 // 	Items []cd.AnalysisResult `json:"results" jsonschema_description:"分析結果の配列"`
 // }
 
-func (c *client) Chat(ctx context.Context, prompt string) ([]cd.AnalysisResult, error) {
+func (c *Client) Chat(ctx context.Context, prompt string) ([]cd.AnalysisResult, error) {
 	// schema := GenerateSchema[AnalysisResults]()
 
 	// schemaParam := openai.ResponseFormatJSONSchemaJSONSchemaParam{

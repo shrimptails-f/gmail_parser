@@ -16,7 +16,7 @@ type EmailStoreRepositoryImpl struct {
 }
 
 // NewEmailStoreRepository はメール保存リポジトリを作成します
-func NewEmailStoreRepository(db *gorm.DB) EmailStoreRepository {
+func NewEmailStoreRepository(db *gorm.DB) *EmailStoreRepositoryImpl {
 	return &EmailStoreRepositoryImpl{
 		db: db,
 	}

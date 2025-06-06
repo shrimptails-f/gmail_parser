@@ -14,13 +14,13 @@ import (
 
 // EmailStoreUseCaseImpl はメール保存のユースケース実装です
 type EmailStoreUseCaseImpl struct {
-	emailStoreRepository r.EmailStoreRepository
+	r r.EmailStoreRepository
 }
 
 // NewEmailStoreUseCase はメール保存ユースケースを作成します
-func NewEmailStoreUseCase(emailStoreRepository r.EmailStoreRepository) EmailStoreUseCase {
+func NewEmailStoreUseCase(r r.EmailStoreRepository) *EmailStoreUseCaseImpl {
 	return &EmailStoreUseCaseImpl{
-		emailStoreRepository: emailStoreRepository,
+		r: r,
 	}
 }
 
@@ -78,7 +78,7 @@ func (u *EmailStoreUseCaseImpl) SaveEmailAnalysisResult(result domain.AnalysisRe
 	email := convertToProjectAnalysisResult(result, emailKeywordGroups, emailPositionGroups, emailWorkTypeGroups)
 
 	// リポジトリを使用してメールを保存
-	if err := u.emailStoreRepository.SaveEmail(email); err != nil {
+	if err := u.r.SaveEmail(email); err != nil {
 		return fmt.Errorf("メール保存エラー: %w", err)
 	}
 
@@ -130,7 +130,7 @@ func (u *EmailStoreUseCaseImpl) CheckGmailIdExists(emailId string) (bool, error)
 		return false, fmt.Errorf("メールIDが空です")
 	}
 
-	exists, err := u.emailStoreRepository.EmailExists(emailId)
+	exists, err := u.r.EmailExists(emailId)
 	if err != nil {
 		return false, fmt.Errorf("メール存在チェックエラー: %w", err)
 	}
@@ -141,7 +141,7 @@ func (u *EmailStoreUseCaseImpl) CheckGmailIdExists(emailId string) (bool, error)
 // filterNotExistingWords はキーワード取得または存在確認を行い、作成が必要なキーワード一覧を返します
 func (u *EmailStoreUseCaseImpl) filterNotExistingWords(words []string) ([]string, error) {
 	// TODO: typeをクエリに含める?
-	keywords, err := u.emailStoreRepository.GetKeywords(words)
+	keywords, err := u.r.GetKeywords(words)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +162,7 @@ func (u *EmailStoreUseCaseImpl) filterNotExistingWords(words []string) ([]string
 		}
 	}
 
-	keywordGroups, err := u.emailStoreRepository.GetkeywordGroups(notExistWordsTmp)
+	keywordGroups, err := u.r.GetkeywordGroups(notExistWordsTmp)
 	if err != nil {
 		return nil, err
 	}
@@ -207,7 +207,7 @@ func (u *EmailStoreUseCaseImpl) buildKeywordEntities(words []string, keywordType
 }
 
 func (u *EmailStoreUseCaseImpl) filterNotExistingPositionWords(words []string) ([]string, error) {
-	positionWords, err := u.emailStoreRepository.GetPositionWords(words)
+	positionWords, err := u.r.GetPositionWords(words)
 	if err != nil {
 		return nil, err
 	}
@@ -228,7 +228,7 @@ func (u *EmailStoreUseCaseImpl) filterNotExistingPositionWords(words []string) (
 		}
 	}
 
-	positionGroups, err := u.emailStoreRepository.GetPositionGroups(notExistWordsTmp)
+	positionGroups, err := u.r.GetPositionGroups(notExistWordsTmp)
 	if err != nil {
 		return nil, err
 	}
@@ -249,7 +249,7 @@ func (u *EmailStoreUseCaseImpl) filterNotExistingPositionWords(words []string) (
 }
 
 func (u *EmailStoreUseCaseImpl) filterNotExistingWorkTypeWords(words []string) ([]string, error) {
-	workTypeWords, err := u.emailStoreRepository.GetWorkTypeWords(words)
+	workTypeWords, err := u.r.GetWorkTypeWords(words)
 	if err != nil {
 		return nil, err
 	}
@@ -270,7 +270,7 @@ func (u *EmailStoreUseCaseImpl) filterNotExistingWorkTypeWords(words []string) (
 		}
 	}
 
-	workTypeGroups, err := u.emailStoreRepository.GetWorkTypeGroups(notExistWordsTmp)
+	workTypeGroups, err := u.r.GetWorkTypeGroups(notExistWordsTmp)
 	if err != nil {
 		return nil, err
 	}

@@ -6,15 +6,14 @@ import (
 	cd "business/internal/common/domain"
 	emailstoredi "business/internal/emailstore/di"
 	ed "business/internal/emailstore/domain"
-	"business/internal/gmail/application"
-	"business/internal/gmail/domain"
+	ga "business/internal/gmail/application"
 	gd "business/internal/gmail/domain"
-	"business/internal/gmail/infrastructure"
+	gi "business/internal/gmail/infrastructure"
 	aiapp "business/internal/openAi/application"
 	aiinfra "business/internal/openAi/infrastructure"
 
 	"business/tools/logger"
-	"business/tools/mysql"
+	db "business/tools/mysql"
 	oa "business/tools/openai"
 	osw "business/tools/oswrapper"
 	"context"
@@ -94,15 +93,15 @@ func executeGmailAuth(ctx context.Context) error {
 	}
 
 	// Gmail認証設定を作成
-	config := domain.NewGmailAuthConfig(
+	config := gd.NewGmailAuthConfig(
 		clientSecretPath,
 		"credentials",
 		"gmailai",
 	)
 
 	// Gmail認証サービスとユースケースを作成
-	gmailAuthService := infrastructure.NewGmailAuthService()
-	gmailAuthUseCase := application.NewGmailAuthUseCase(gmailAuthService)
+	gmailAuthService := gi.NewGmailAuthService()
+	gmailAuthUseCase := ga.NewGmailAuthUseCase(gmailAuthService)
 
 	// Gmail認証を実行
 	result, err := gmailAuthUseCase.AuthenticateGmail(ctx, *config)
@@ -130,15 +129,15 @@ func testGmailService(ctx context.Context, l *logger.Logger) error {
 	}
 
 	// Gmail認証設定を作成
-	config := domain.NewGmailAuthConfig(
+	config := gd.NewGmailAuthConfig(
 		clientSecretPath,
 		"credentials",
 		"gmailai",
 	)
 
 	// Gmail認証サービスとユースケースを作成
-	gmailAuthService := infrastructure.NewGmailAuthService()
-	gmailAuthUseCase := application.NewGmailAuthUseCase(gmailAuthService)
+	gmailAuthService := gi.NewGmailAuthService()
+	gmailAuthUseCase := ga.NewGmailAuthUseCase(gmailAuthService)
 
 	// Gmail APIサービスを作成
 	service, err := gmailAuthUseCase.CreateGmailService(ctx, *config)
@@ -177,16 +176,16 @@ func testGmailMessages(ctx context.Context, l *logger.Logger) error {
 	}
 
 	// Gmail認証設定を作成
-	config := domain.NewGmailAuthConfig(
+	config := gd.NewGmailAuthConfig(
 		clientSecretPath,
 		"credentials",
 		"gmailai",
 	)
 
 	// サービスとユースケースを作成
-	gmailAuthService := infrastructure.NewGmailAuthService()
-	gmailMessageService := infrastructure.NewGmailMessageService()
-	gmailMessageUseCase := application.NewGmailMessageUseCase(gmailAuthService, gmailMessageService)
+	gmailAuthService := gi.NewGmailAuthService()
+	gmailMessageService := gi.NewGmailMessageService()
+	gmailMessageUseCase := ga.NewGmailMessageUseCase(gmailAuthService, gmailMessageService)
 
 	// メッセージ一覧を取得（最大5件）
 	messages, err := gmailMessageUseCase.GetMessages(ctx, *config, 5)
@@ -210,15 +209,15 @@ func testGmailLabels(ctx context.Context, l *logger.Logger) error {
 	}
 
 	// Gmail認証設定を作成
-	config := domain.NewGmailAuthConfig(
+	config := gd.NewGmailAuthConfig(
 		clientSecretPath,
 		"credentials",
 		"gmailai",
 	)
 
 	// サービスとユースケースを作成
-	gmailAuthService := infrastructure.NewGmailAuthService()
-	gmailMessageService := infrastructure.NewGmailMessageService()
+	gmailAuthService := gi.NewGmailAuthService()
+	gmailMessageService := gi.NewGmailMessageService()
 
 	// 認証情報を取得
 	credential, err := gmailAuthService.LoadCredentials(config.CredentialsFolder, config.UserID)
@@ -256,16 +255,16 @@ func getGmailMessagesByLabel(ctx context.Context, l *logger.Logger, labelPath st
 	}
 
 	// Gmail認証設定を作成
-	config := domain.NewGmailAuthConfig(
+	config := gd.NewGmailAuthConfig(
 		clientSecretPath,
 		"credentials",
 		"gmailai",
 	)
 
 	// サービスとユースケースを作成
-	gmailAuthService := infrastructure.NewGmailAuthService()
-	gmailMessageService := infrastructure.NewGmailMessageService()
-	gmailMessageUseCase := application.NewGmailMessageUseCase(gmailAuthService, gmailMessageService)
+	gmailAuthService := gi.NewGmailAuthService()
+	gmailMessageService := gi.NewGmailMessageService()
+	gmailMessageUseCase := ga.NewGmailMessageUseCase(gmailAuthService, gmailMessageService)
 
 	// ラベル指定で当日0時以降のメッセージを全件取得
 	messages, err := gmailMessageUseCase.GetAllMessagesByLabelPathFromToday(ctx, *config, labelPath, 50)
@@ -318,13 +317,13 @@ func getClientSecretPath() string {
 }
 
 // analyzeEmailMessage はメールメッセージを分析します
-func analyzeEmailMessage(ctx context.Context, messages []domain.GmailMessage) error {
+func analyzeEmailMessage(ctx context.Context, messages []gd.GmailMessage) error {
 	// DB保存機能郡 インスタンス作成
-	mysqlConn, err := mysql.New()
+	dbConn, err := db.New()
 	if err != nil {
 		return fmt.Errorf("MySQL接続エラー: %w", err)
 	}
-	es := emailstoredi.ProvideEmailStoreDependencies(mysqlConn.DB)
+	es := emailstoredi.ProvideEmailStoreDependencies(dbConn.DB)
 
 	// OpenAi解析機能群 インスタンス作成
 	osw := osw.New()
