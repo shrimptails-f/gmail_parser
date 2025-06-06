@@ -3,15 +3,20 @@
 package main
 
 import (
+	cd "business/internal/common/domain"
 	emailstoredi "business/internal/emailstore/di"
+	ed "business/internal/emailstore/domain"
 	"business/internal/gmail/application"
 	"business/internal/gmail/domain"
+	gd "business/internal/gmail/domain"
 	"business/internal/gmail/infrastructure"
-	aiapp "business/internal/openai/application"
-	aiinfra "business/internal/openai/infrastructure"
+	aiapp "business/internal/openAi/application"
+	aiinfra "business/internal/openAi/infrastructure"
 
 	"business/tools/logger"
 	"business/tools/mysql"
+	oa "business/tools/openai"
+	osw "business/tools/oswrapper"
 	"context"
 	"fmt"
 	"os"
@@ -314,27 +319,22 @@ func getClientSecretPath() string {
 
 // analyzeEmailMessage はメールメッセージを分析します
 func analyzeEmailMessage(ctx context.Context, messages []domain.GmailMessage) error {
-	// MySQL接続を作成してメールID存在確認
+	// DB保存機能郡 インスタンス作成
 	mysqlConn, err := mysql.New()
 	if err != nil {
 		return fmt.Errorf("MySQL接続エラー: %w", err)
 	}
-	// EmailStoreUseCaseを作成
-	emailStoreUseCase := emailstoredi.ProvideEmailStoreDependencies(mysqlConn.DB)
+	es := emailstoredi.ProvideEmailStoreDependencies(mysqlConn.DB)
 
-	// サービスを作成
-	promptService := aiinfra.NewFilePromptService("prompts")
-	// OpenAI APIキーを環境変数から取得
-	apiKey := os.Getenv("OPENAI_API_KEY")
-	if apiKey == "" {
-		return fmt.Errorf("OPENAI_API_KEY環境変数が設定されていません")
-	}
-	textAnalysisService := aiinfra.NewOpenAIService(apiKey)
-	textAnalysisUseCase := aiapp.NewTextAnalysisUseCase(textAnalysisService, promptService)
+	// OpenAi解析機能群 インスタンス作成
+	osw := osw.New()
+	oa := oa.New(osw.GetEnv("OPENAI_API_KEY"))
+	aiapp := aiapp.NewUseCase(aiinfra.NewAnalyzer(oa), osw)
 
 	for _, message := range messages {
+
 		// メールIDの存在確認
-		exists, err := emailStoreUseCase.CheckGmailIdExists(message.ID)
+		exists, err := es.CheckGmailIdExists(message.ID)
 		if err != nil {
 			return fmt.Errorf("メール存在確認エラー: %w", err)
 		}
@@ -345,15 +345,19 @@ func analyzeEmailMessage(ctx context.Context, messages []domain.GmailMessage) er
 			continue
 		}
 
-		// メール分析を実行
-		results, err := textAnalysisUseCase.AnalyzeEmailText(ctx, message)
+		// メール本文の分析を実行
+		analysisResults, err := aiapp.AnalyzeEmailContent(ctx, message.Body)
 		if err != nil {
-			return fmt.Errorf("複数案件メール分析エラー: %w", err)
+			return fmt.Errorf("メール分析エラー: %w", err)
 		}
+
+		// 解析結果を保存形式へ詰め替える。
+		results := convertToStructs(message, analysisResults)
 
 		// DB保存
 		for _, result := range results {
-			if err := emailStoreUseCase.SaveEmailAnalysisResult(result); err != nil {
+
+			if err := es.SaveEmailAnalysisResult(result); err != nil {
 				return fmt.Errorf("複数案件DB保存エラー: %w", err)
 			}
 		}
@@ -361,6 +365,42 @@ func analyzeEmailMessage(ctx context.Context, messages []domain.GmailMessage) er
 
 	return nil
 }
+
+// convertToStructs は引数を結合して保存する形式へ詰め替えます。
+func convertToStructs(message gd.GmailMessage, analysisResults []cd.AnalysisResult) []ed.AnalysisResult {
+	var results []ed.AnalysisResult
+
+	for _, analysisResult := range analysisResults {
+		result := ed.AnalysisResult{
+			GmailID:             message.ID,
+			ReceivedDate:        message.Date,
+			Summary:             analysisResult.ProjectTitle,
+			Subject:             message.Subject,
+			From:                message.From,
+			FromEmail:           message.ExtractEmailAddress(),
+			Body:                message.Body,
+			Category:            analysisResult.MailCategory,
+			ProjectName:         analysisResult.ProjectTitle,
+			StartPeriod:         analysisResult.StartPeriod,
+			EndPeriod:           analysisResult.EndPeriod,
+			WorkLocation:        analysisResult.WorkLocation,
+			PriceFrom:           analysisResult.PriceFrom,
+			PriceTo:             analysisResult.PriceTo,
+			Languages:           analysisResult.Languages,
+			Frameworks:          analysisResult.Frameworks,
+			Positions:           analysisResult.Positions,
+			WorkTypes:           analysisResult.WorkTypes,
+			RequiredSkillsMust:  analysisResult.RequiredSkillsMust,
+			RequiredSkillsWant:  analysisResult.RequiredSkillsWant,
+			RemoteWorkCategory:  analysisResult.RemoteWorkCategory,
+			RemoteWorkFrequency: analysisResult.RemoteWorkFrequency,
+		}
+		results = append(results, result)
+	}
+
+	return results
+}
+
 func printUsage() {
 	fmt.Println("Gmail認証コマンドラインアプリケーション")
 	fmt.Println("")

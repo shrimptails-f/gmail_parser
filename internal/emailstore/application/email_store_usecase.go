@@ -26,16 +26,6 @@ func NewEmailStoreUseCase(emailStoreRepository r.EmailStoreRepository) EmailStor
 
 // SaveEmailAnalysisResult はメール分析結果を保存します
 func (u *EmailStoreUseCaseImpl) SaveEmailAnalysisResult(result domain.AnalysisResult) error {
-	// メールが既に存在するかチェック
-	isGmailIdExist, err := u.CheckGmailIdExists(result.GmailID)
-	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		return fmt.Errorf("メール保存エラー: %w", err)
-	}
-	if isGmailIdExist {
-		fmt.Printf("GメールID %s は既に処理済みです。字句解析をスキップします。\n", result.GmailID)
-		return nil
-	}
-
 	// 言語のチェック
 	notExistLanguages, err := u.filterNotExistingWords(result.Languages)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {

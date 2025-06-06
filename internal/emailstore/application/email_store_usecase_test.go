@@ -4,7 +4,6 @@ package application
 import (
 	"business/internal/emailstore/domain"
 	r "business/internal/emailstore/infrastructure"
-	openaidomain "business/internal/openai/domain"
 	"testing"
 	"time"
 
@@ -18,11 +17,6 @@ type MockEmailStoreRepository struct {
 }
 
 func (m *MockEmailStoreRepository) SaveEmail(result r.Email) error {
-	args := m.Called(result)
-	return args.Error(0)
-}
-
-func (m *MockEmailStoreRepository) SaveEmailMultiple(result *openaidomain.EmailAnalysisMultipleResult) error {
 	args := m.Called(result)
 	return args.Error(0)
 }
