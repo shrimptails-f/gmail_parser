@@ -4,6 +4,7 @@ package infrastructure
 
 import (
 	cd "business/internal/common/domain"
+	"business/tools/mysql"
 	"errors"
 	"fmt"
 	"strings"
@@ -25,7 +26,9 @@ func NewEmailStoreRepository(db *gorm.DB) *EmailStoreRepositoryImpl {
 
 func (r *EmailStoreRepositoryImpl) SaveEmail(result cd.Email) error {
 	// トランザクション開始
-	tx := r.db.Begin()
+	tx, creanUp := mysql.Transactional(r.db)
+	defer creanUp()
+
 	if tx.Error != nil {
 		return fmt.Errorf("トランザクション開始エラー: %w", tx.Error)
 	}
@@ -48,11 +51,6 @@ func (r *EmailStoreRepositoryImpl) SaveEmail(result cd.Email) error {
 			tx.Rollback()
 			return fmt.Errorf("案件詳細保存エラー: %w", err)
 		}
-	}
-
-	// トランザクションコミット
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("トランザクションコミットエラー: %w", err)
 	}
 
 	return nil
