@@ -1,3 +1,6 @@
+//go:build integration
+// +build integration
+
 package gmail
 
 import (
@@ -5,8 +8,11 @@ import (
 	"business/tools/oswrapper"
 	"context"
 	"fmt"
+	"strconv"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // Gメール認証をテストします。
@@ -16,11 +22,14 @@ func TestGmailAuthenticate(t *testing.T) {
 
 	osw := oswrapper.New()
 	credentialsPath := osw.GetEnv("CLIENT_SECRET_PATH")
+
+	strPort := osw.GetEnv("GMAIL_PORT")
+	port, err := strconv.Atoi(strPort)
+	assert.NoError(t, err)
+
 	gs := gmailService.NewClient()
-	_, err := gs.Authenticate(ctx, credentialsPath)
-	if err != nil {
-		t.Fatalf("認可失敗: %v", err)
-	}
+	_, err = gs.Authenticate(ctx, credentialsPath, port)
+	assert.NoError(t, err)
 }
 
 // Gメールが取得できるかテストを行います。

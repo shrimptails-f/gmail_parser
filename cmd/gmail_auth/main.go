@@ -7,21 +7,20 @@ import (
 	"business/internal/emailstore/application"
 	emailstoredi "business/internal/emailstore/di"
 	ga "business/internal/gmail/application"
-	gd "business/internal/gmail/domain"
 	gi "business/internal/gmail/infrastructure"
 	aiapp "business/internal/openAi/application"
 	aiinfra "business/internal/openAi/infrastructure"
+	"strconv"
 
+	gc "business/tools/gmail"
+	gs "business/tools/gmailService"
 	"business/tools/logger"
 	db "business/tools/mysql"
 	oa "business/tools/openai"
-	osw "business/tools/oswrapper"
+	"business/tools/oswrapper"
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
-
-	"google.golang.org/api/gmail/v1"
 )
 
 func main() {
@@ -37,35 +36,30 @@ func main() {
 	command := os.Args[1]
 	ctx := context.Background()
 
+	osw := oswrapper.New()
+
+	credentialsPath := osw.GetEnv("CLIENT_SECRET_PATH")
+	tokenPath := "/data/credentials/token_user.json"
+	gs := gs.NewClient()
+	svc, err := gs.CreateGmailService(ctx, credentialsPath, tokenPath)
+	if err != nil {
+		fmt.Printf("gメールAPIクライアント生成に失敗しました:%v \n", err)
+		return
+	}
+
 	switch command {
 	case "gmail-auth":
 		// Gmail認証を実行
-		if err := executeGmailAuth(ctx); err != nil {
+		strPort := osw.GetEnv("GMAIL_PORT")
+		port, err := strconv.Atoi(strPort)
+		if err != nil {
+			fmt.Printf("gメールのリダイレクトポートの取得に失敗しました。ENVのGMAIL_PORTを見直してください。: %v \n", err)
+			return
+		}
+		if err := executeGmailAuth(ctx, gs, credentialsPath, port); err != nil {
 			l.Error(fmt.Errorf("gmail認証に失敗しました: %w", err))
 			os.Exit(1)
 		}
-
-	case "gmail-service":
-		// Gmail APIサービスを作成してテスト
-		if err := testGmailService(ctx, l); err != nil {
-			l.Error(fmt.Errorf("gmail APIサービスのテストに失敗しました: %w", err))
-			os.Exit(1)
-		}
-
-	case "gmail-messages":
-		// Gmailメッセージを取得してテスト
-		if err := testGmailMessages(ctx, l); err != nil {
-			l.Error(fmt.Errorf("gmailメッセージの取得に失敗しました: %w", err))
-			os.Exit(1)
-		}
-
-	case "gmail-labels":
-		// Gmailラベル一覧を取得してテスト
-		if err := testGmailLabels(ctx, l); err != nil {
-			l.Error(fmt.Errorf("gmailラベル一覧の取得に失敗しました: %w", err))
-			os.Exit(1)
-		}
-
 	case "gmail-messages-by-label":
 		// ラベル指定でGmailメッセージを取得してテスト
 		if len(os.Args) < 3 {
@@ -73,12 +67,14 @@ func main() {
 			fmt.Println("使用例: go run main.go gmail-messages-by-label 営業/案件")
 			os.Exit(1)
 		}
-		labelPath := os.Args[2]
+		label := os.Args[2]
+		fmt.Printf("指定ラベル: %s\n", label)
+
+		gc := gc.NewClient(svc)
 
 		// サービスとユースケースを作成
-		gmailAuthService := gi.NewGmailAuthService()
-		gmailMessageService := gi.NewGmailMessageService()
-		gapp := ga.NewGmailMessageUseCase(gmailAuthService, gmailMessageService)
+		gi := gi.New(gc)
+		ga := ga.New(gi)
 
 		// DB保存機能郡 インスタンス作成
 		dbConn, err := db.New()
@@ -89,11 +85,10 @@ func main() {
 		es := emailstoredi.ProvideEmailStoreDependencies(dbConn.DB)
 
 		// OpenAi解析機能群 インスタンス作成
-		osw := osw.New()
 		oa := oa.New(osw.GetEnv("OPENAI_API_KEY"))
 		aiapp := aiapp.NewUseCase(aiinfra.NewAnalyzer(oa), osw)
 
-		if err := getGmailMessagesByLabel(ctx, l, gapp, es, *aiapp, labelPath); err != nil {
+		if err := getGmailMessagesByLabel(ctx, l, ga, es, *aiapp, label); err != nil {
 			l.Error(fmt.Errorf("ラベル指定gmailメッセージの取得に失敗しました: %w", err))
 			os.Exit(1)
 		}
@@ -104,191 +99,33 @@ func main() {
 }
 
 // executeGmailAuth はGmail認証を実行します
-func executeGmailAuth(ctx context.Context) error {
-	// client-secret.jsonファイルのパスを取得
-	clientSecretPath := getClientSecretPath()
-	if clientSecretPath == "" {
-		return fmt.Errorf("client-secret.jsonファイルが見つかりません。カレントディレクトリまたは環境変数CLIENT_SECRET_PATHで指定してください")
-	}
+func executeGmailAuth(ctx context.Context, gs *gs.Client, credentialsPath string, port int) error {
 
-	// Gmail認証設定を作成
-	config := gd.NewGmailAuthConfig(
-		clientSecretPath,
-		"credentials",
-		"gmailai",
-	)
-
-	// Gmail認証サービスとユースケースを作成
-	gmailAuthService := gi.NewGmailAuthService()
-	gmailAuthUseCase := ga.NewGmailAuthUseCase(gmailAuthService)
-
-	// Gmail認証を実行
-	result, err := gmailAuthUseCase.AuthenticateGmail(ctx, *config)
+	result, err := gs.Authenticate(ctx, credentialsPath, port)
 	if err != nil {
 		return err
 	}
 
 	// 認証結果を表示
 	fmt.Printf("Gmail認証成功!\n")
-	fmt.Printf("アプリケーション名: %s\n", result.ApplicationName)
-	fmt.Printf("新規認証: %t\n", result.IsNewAuth)
-	fmt.Printf("アクセストークン: %s...\n", result.Credential.AccessToken[:20])
-	fmt.Printf("トークンタイプ: %s\n", result.Credential.TokenType)
-	fmt.Printf("有効期限: %s\n", result.Credential.ExpiresAt.Format("2006-01-02 15:04:05"))
-
-	return nil
-}
-
-// testGmailService はGmail APIサービスを作成してテストします
-func testGmailService(ctx context.Context, l *logger.Logger) error {
-	// client-secret.jsonファイルのパスを取得
-	clientSecretPath := getClientSecretPath()
-	if clientSecretPath == "" {
-		return fmt.Errorf("client-secret.jsonファイルが見つかりません。カレントディレクトリまたは環境変数CLIENT_SECRET_PATHで指定してください")
-	}
-
-	// Gmail認証設定を作成
-	config := gd.NewGmailAuthConfig(
-		clientSecretPath,
-		"credentials",
-		"gmailai",
-	)
-
-	// Gmail認証サービスとユースケースを作成
-	gmailAuthService := gi.NewGmailAuthService()
-	gmailAuthUseCase := ga.NewGmailAuthUseCase(gmailAuthService)
-
-	// Gmail APIサービスを作成
-	service, err := gmailAuthUseCase.CreateGmailService(ctx, *config)
-	if err != nil {
-		return err
-	}
-
-	// Gmail APIサービスをテスト
-	gmailService, ok := service.(*gmail.Service)
-	if !ok {
-		return fmt.Errorf("gmail APIサービスの型変換に失敗しました")
-	}
-
-	// ユーザープロファイルを取得してテスト
-	profile, err := gmailService.Users.GetProfile("me").Do()
-	if err != nil {
-		return fmt.Errorf("ユーザープロファイルの取得に失敗しました: %w", err)
-	}
-
-	// 結果を表示
-	fmt.Printf("Gmail APIサービステスト成功!\n")
-	fmt.Printf("メールアドレス: %s\n", profile.EmailAddress)
-	fmt.Printf("メッセージ総数: %d\n", profile.MessagesTotal)
-	fmt.Printf("スレッド総数: %d\n", profile.ThreadsTotal)
-	fmt.Printf("履歴ID: %d\n", profile.HistoryId)
-
-	return nil
-}
-
-// testGmailMessages はGmailメッセージを取得してテストします
-func testGmailMessages(ctx context.Context, l *logger.Logger) error {
-	// client-secret.jsonファイルのパスを取得
-	clientSecretPath := getClientSecretPath()
-	if clientSecretPath == "" {
-		return fmt.Errorf("client-secret.jsonファイルが見つかりません。カレントディレクトリまたは環境変数CLIENT_SECRET_PATHで指定してください")
-	}
-
-	// Gmail認証設定を作成
-	config := gd.NewGmailAuthConfig(
-		clientSecretPath,
-		"credentials",
-		"gmailai",
-	)
-
-	// サービスとユースケースを作成
-	gmailAuthService := gi.NewGmailAuthService()
-	gmailMessageService := gi.NewGmailMessageService()
-	gmailMessageUseCase := ga.NewGmailMessageUseCase(gmailAuthService, gmailMessageService)
-
-	// メッセージ一覧を取得（最大5件）
-	messages, err := gmailMessageUseCase.GetMessages(ctx, *config, 5)
-	if err != nil {
-		return fmt.Errorf("メッセージ一覧の取得に失敗しました: %w", err)
-	}
-
-	// 結果を表示
-	fmt.Printf("Gmailメッセージ取得テスト成功!\n")
-	fmt.Printf("取得したメッセージ数: %d\n\n", len(messages))
-
-	return nil
-}
-
-// testGmailLabels はGmailラベル一覧を取得してテストします
-func testGmailLabels(ctx context.Context, l *logger.Logger) error {
-	// client-secret.jsonファイルのパスを取得
-	clientSecretPath := getClientSecretPath()
-	if clientSecretPath == "" {
-		return fmt.Errorf("client-secret.jsonファイルが見つかりません。カレントディレクトリまたは環境変数CLIENT_SECRET_PATHで指定してください")
-	}
-
-	// Gmail認証設定を作成
-	config := gd.NewGmailAuthConfig(
-		clientSecretPath,
-		"credentials",
-		"gmailai",
-	)
-
-	// サービスとユースケースを作成
-	gmailAuthService := gi.NewGmailAuthService()
-	gmailMessageService := gi.NewGmailMessageService()
-
-	// 認証情報を取得
-	credential, err := gmailAuthService.LoadCredentials(config.CredentialsFolder, config.UserID)
-	if err != nil {
-		return fmt.Errorf("認証情報の読み込みに失敗しました: %w", err)
-	}
-
-	// ラベル一覧を取得
-	labels, err := gmailMessageService.GetLabels(ctx, *credential, config.ApplicationName)
-	if err != nil {
-		return fmt.Errorf("ラベル一覧の取得に失敗しました: %w", err)
-	}
-
-	// 結果を表示
-	fmt.Printf("Gmailラベル一覧取得テスト成功!\n")
-	fmt.Printf("取得したラベル数: %d\n\n", len(labels))
-
-	for i, label := range labels {
-		fmt.Printf("=== ラベル %d ===\n", i+1)
-		fmt.Printf("ID: %s\n", label.ID)
-		fmt.Printf("名前: %s\n", label.Name)
-		fmt.Printf("タイプ: %s\n", label.Type)
-		fmt.Println()
-	}
+	fmt.Printf("アクセストークン: %s...\n", result.AccessToken[:20])
+	fmt.Printf("トークンタイプ: %s\n", result.TokenType)
+	fmt.Printf("有効期限: %v\n", result.ExpiresIn)
 
 	return nil
 }
 
 // getGmailMessagesByLabel はラベル指定でGmailメッセージを取得してテストします
-func getGmailMessagesByLabel(ctx context.Context, l *logger.Logger, ga ga.GmailMessageUseCase, es application.EmailStoreUseCase, aiapp aiapp.UseCase, labelPath string) error {
-	// client-secret.jsonファイルのパスを取得
-	clientSecretPath := getClientSecretPath()
-	if clientSecretPath == "" {
-		return fmt.Errorf("client-secret.jsonファイルが見つかりません。カレントディレクトリまたは環境変数CLIENT_SECRET_PATHで指定してください")
-	}
+func getGmailMessagesByLabel(ctx context.Context, l *logger.Logger, ga ga.GmailUseCaseInterface, es application.EmailStoreUseCase, aiapp aiapp.UseCase, label string) error {
 
-	// Gmail認証設定を作成
-	config := gd.NewGmailAuthConfig(
-		clientSecretPath,
-		"credentials",
-		"gmailai",
-	)
-
-	// ラベル指定で当日0時以降のメッセージを全件取得
-	messages, err := ga.GetAllMessagesByLabelPathFromToday(ctx, *config, labelPath, 50)
+	messages, err := ga.GetMessages(ctx, label)
 	if err != nil {
-		return fmt.Errorf("ラベル指定メッセージ一覧の取得に失敗しました: %w", err)
+		fmt.Printf("gメール取得処理失敗: %v", err)
+		return err
 	}
 
 	// 結果を表示
 	fmt.Printf("ラベル指定Gmailメッセージ取得テスト成功!\n")
-	fmt.Printf("指定ラベル: %s\n", labelPath)
 	fmt.Printf("取得したメッセージ数: %d\n\n", len(messages))
 
 	for _, message := range messages {
@@ -326,38 +163,8 @@ func getGmailMessagesByLabel(ctx context.Context, l *logger.Logger, ga ga.GmailM
 	return nil
 }
 
-// getClientSecretPath はclient-secret.jsonファイルのパスを取得します
-func getClientSecretPath() string {
-	// 環境変数から取得
-	if path := os.Getenv("CLIENT_SECRET_PATH"); path != "" {
-		if _, err := os.Stat(path); err == nil {
-			return path
-		}
-	}
-
-	// カレントディレクトリから検索
-	candidates := []string{
-		"client-secret.json",
-		"credentials/client-secret.json",
-		"../client-secret.json",
-		"../../client-secret.json",
-	}
-
-	for _, candidate := range candidates {
-		absPath, err := filepath.Abs(candidate)
-		if err != nil {
-			continue
-		}
-		if _, err := os.Stat(absPath); err == nil {
-			return absPath
-		}
-	}
-
-	return ""
-}
-
 // convertToStructs は引数を結合して保存する形式へ詰め替えます。
-func convertToStructs(message gd.GmailMessage, analysisResults []cd.AnalysisResult) []cd.Email {
+func convertToStructs(message cd.BasicMessage, analysisResults []cd.AnalysisResult) []cd.Email {
 	var results []cd.Email
 
 	for _, analysisResult := range analysisResults {

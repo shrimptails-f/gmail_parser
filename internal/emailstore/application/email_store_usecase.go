@@ -5,7 +5,10 @@ package application
 import (
 	cd "business/internal/common/domain"
 	r "business/internal/emailstore/infrastructure"
+	"errors"
 	"fmt"
+
+	"gorm.io/gorm"
 )
 
 // EmailStoreUseCaseImpl はメール保存のユースケース実装です
@@ -32,18 +35,13 @@ func (u *EmailStoreUseCaseImpl) SaveEmailAnalysisResult(result cd.Email) error {
 
 // CheckGmailIdExists はメールIDの存在チェックを行います
 func (u *EmailStoreUseCaseImpl) CheckGmailIdExists(emailId string) (bool, error) {
-	exists := false
 	if emailId == "" {
 		return false, fmt.Errorf("メールIDが空です")
 	}
 
-	email, err := u.r.GetEmailByGmailId(emailId)
-	if err != nil {
+	exists, err := u.r.EmailExists(emailId)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return false, fmt.Errorf("メール存在チェックエラー: %w", err)
-	}
-
-	if email.ID != 0 {
-		exists = true
 	}
 
 	return exists, nil

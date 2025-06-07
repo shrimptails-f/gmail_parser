@@ -20,14 +20,12 @@ type Client struct {
 
 // GメールのAPIコールをする前の処理をまとめた構造体です
 // 認可はURLを手動で開く必要があります。
-// CreateGmailService関数は
 func NewClient() *Client {
 	return &Client{}
 }
 
-func (c *Client) Authenticate(ctx context.Context, clientSecretPath string) (*oauth2.Token, error) {
+func (c *Client) Authenticate(ctx context.Context, clientSecretPath string, port int) (*oauth2.Token, error) {
 	scopes := []string{"https://www.googleapis.com/auth/gmail.readonly"}
-	port := 5555
 
 	b, err := os.ReadFile(clientSecretPath)
 	if err != nil {
