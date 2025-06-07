@@ -79,10 +79,18 @@ func (c *Client) GetMessagesByLabelName(ctx context.Context, labelName string) (
 			return nil, err
 		}
 
+		seenThreads := make(map[string]struct{})
+
 		for _, m := range resp.Messages {
+			// スレッドIDで重複判定
+			if _, exists := seenThreads[m.ThreadId]; exists {
+				continue // 同一スレッドはスキップ
+			}
+			seenThreads[m.ThreadId] = struct{}{}
+
 			full, err := c.svc.Users.Messages.Get(user, m.Id).Format("full").Do()
 			if err != nil {
-				continue // またはログ出力
+				continue // 取得失敗はスキップ
 			}
 
 			msg := cd.BasicMessage{
@@ -91,7 +99,7 @@ func (c *Client) GetMessagesByLabelName(ctx context.Context, labelName string) (
 				From:    getHeader(full.Payload.Headers, "From"),
 				To:      parseHeaderMulti(getHeader(full.Payload.Headers, "To")),
 				Date:    parseDate(getHeader(full.Payload.Headers, "Date")),
-				Body:    extractBody(full.Payload),
+				Body:    stripHTMLTags(extractBody(full.Payload)), // HTMLタグを削除する。
 			}
 
 			messages = append(messages, msg)

@@ -1,4 +1,4 @@
-package infrastructure
+package gmail
 
 import (
 	"testing"
