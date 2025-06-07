@@ -62,8 +62,7 @@ func TestCheckGmailIdExists_Exists(t *testing.T) {
 	mockRepo := new(MockEmailStoreRepository)
 	usecase := NewEmailStoreUseCase(mockRepo)
 
-	expectedEmail := r.Email{ID: 123}
-	mockRepo.On("GetEmailByGmailId", "gmail-id-123").Return(expectedEmail, nil)
+	mockRepo.On("EmailExists", "gmail-id-123").Return(true, nil)
 
 	exists, err := usecase.CheckGmailIdExists("gmail-id-123")
 	assert.NoError(t, err)
@@ -76,8 +75,7 @@ func TestCheckGmailIdExists_NotExists(t *testing.T) {
 	mockRepo := new(MockEmailStoreRepository)
 	usecase := NewEmailStoreUseCase(mockRepo)
 
-	expectedEmail := r.Email{}
-	mockRepo.On("GetEmailByGmailId", "non-existent-id").Return(expectedEmail, nil)
+	mockRepo.On("EmailExists", "non-existent-id").Return(false, nil)
 
 	exists, err := usecase.CheckGmailIdExists("non-existent-id")
 	assert.NoError(t, err)
@@ -90,7 +88,7 @@ func TestCheckGmailIdExists_Error(t *testing.T) {
 	mockRepo := new(MockEmailStoreRepository)
 	usecase := NewEmailStoreUseCase(mockRepo)
 
-	mockRepo.On("GetEmailByGmailId", "error-id").Return(r.Email{}, errors.New("db error"))
+	mockRepo.On("EmailExists", "error-id").Return(false, errors.New("db error"))
 
 	exists, err := usecase.CheckGmailIdExists("error-id")
 	assert.Error(t, err)
