@@ -16,22 +16,4 @@ type EmailStoreRepository interface {
 
 	// EmailExists はメールが既に存在するかチェックします
 	EmailExists(id string) (bool, error)
-
-	// GetkeywordGroups は引数からまとめて取得します。
-	GetkeywordGroups(name []string) ([]KeywordGroup, error)
-
-	// GetKeywords は引数からまとめて取得します。
-	GetKeywords(words []string) ([]KeyWord, error)
-
-	// GetPositionGroups は引数からまとめて取得します。
-	GetPositionGroups(name []string) ([]PositionGroup, error)
-
-	// GetPositionWords はポジションが既に存在するかチェックします
-	GetPositionWords(words []string) ([]PositionWord, error)
-
-	// WorkTypeExists は業務種別が既に存在するかチェックします
-	GetWorkTypeWords(words []string) ([]WorkTypeWord, error)
-
-	// GetWorkTypeGroups は業務種別が既に存在するかチェックします
-	GetWorkTypeGroups(words []string) ([]WorkTypeGroup, error)
 }

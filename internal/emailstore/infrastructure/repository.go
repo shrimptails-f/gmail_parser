@@ -93,60 +93,6 @@ func (r *EmailStoreRepositoryImpl) EmailExists(id string) (bool, error) {
 	return count > 0, nil
 }
 
-// GetkeywordGroups はキーワードグループを name で一括取得します
-func (r *EmailStoreRepositoryImpl) GetkeywordGroups(names []string) ([]KeywordGroup, error) {
-	var groups []KeywordGroup
-	if err := r.db.Where("name IN ?", names).Find(&groups).Error; err != nil {
-		return nil, err
-	}
-	return groups, nil
-}
-
-// GetKeywords はキーワードを word で一括取得します
-func (r *EmailStoreRepositoryImpl) GetKeywords(words []string) ([]KeyWord, error) {
-	var keywords []KeyWord
-	if err := r.db.Where("word IN ?", words).Find(&keywords).Error; err != nil {
-		return nil, err
-	}
-	return keywords, nil
-}
-
-// GetPositionGroups はポジショングループを name で一括取得します
-func (r *EmailStoreRepositoryImpl) GetPositionGroups(names []string) ([]PositionGroup, error) {
-	var groups []PositionGroup
-	if err := r.db.Where("name IN ?", names).Find(&groups).Error; err != nil {
-		return nil, err
-	}
-	return groups, nil
-}
-
-// GetPositionWords はポジションの表記ゆれを word で一括取得します
-func (r *EmailStoreRepositoryImpl) GetPositionWords(words []string) ([]PositionWord, error) {
-	var positionWords []PositionWord
-	if err := r.db.Where("word IN ?", words).Find(&positionWords).Error; err != nil {
-		return nil, err
-	}
-	return positionWords, nil
-}
-
-// GetWorkTypeWords は業務種別の表記ゆれを word で一括取得します
-func (r *EmailStoreRepositoryImpl) GetWorkTypeWords(words []string) ([]WorkTypeWord, error) {
-	var workTypeWords []WorkTypeWord
-	if err := r.db.Where("word IN ?", words).Find(&workTypeWords).Error; err != nil {
-		return nil, err
-	}
-	return workTypeWords, nil
-}
-
-// GetWorkTypeGroups は業務種別のグループを name で一括取得します
-func (r *EmailStoreRepositoryImpl) GetWorkTypeGroups(names []string) ([]WorkTypeGroup, error) {
-	var groups []WorkTypeGroup
-	if err := r.db.Where("name IN ?", names).Find(&groups).Error; err != nil {
-		return nil, err
-	}
-	return groups, nil
-}
-
 // saveProjectDetails は案件メールの詳細情報を保存します
 func (r *EmailStoreRepositoryImpl) saveProjectDetails(tx *gorm.DB, result cd.Email, email Email) error {
 	// EmailProjectを保存
