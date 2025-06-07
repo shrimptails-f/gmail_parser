@@ -6,9 +6,8 @@ import (
 
 // EmailKeywordGroup（メールとキーワードの多対多）
 type EmailKeywordGroup struct {
-	EmailID        uint   `gorm:"not null;uniqueIndex:idx_email_keyword_type"`
-	KeywordGroupID uint   `gorm:"not null;uniqueIndex:idx_email_keyword_type"`
-	Type           string `gorm:"type:enum('MUST','WANT','LANGUAGE','FRAMEWORK');not null;uniqueIndex:idx_email_keyword_type"`
+	EmailID        uint `gorm:"not null;uniqueIndex:idx_email_keyword_type"`
+	KeywordGroupID uint `gorm:"not null;uniqueIndex:idx_email_keyword_type"`
 	CreatedAt      time.Time
 
 	// 循環してて完全に積んでるのでコメントアウト

@@ -90,16 +90,6 @@ tasks:
     cmds:
       - go run ./cmd/gmail_auth/ gmail-auth
 
-  gmail-service:
-    desc: "Gメール認証を行う"
-    cmds:
-      - go run ./cmd/gmail_auth/ gmail-service
-
-  gmail-messages:
-    desc: "Gメール取得 動作確認"
-    cmds:
-      - go run ./cmd/gmail_auth/ gmail-messages
-
   gmail-messages-by-label:
     desc: "Gメール取得を行い AIで字句解析を行い DBに保存する"
     env:

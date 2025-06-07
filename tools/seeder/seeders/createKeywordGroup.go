@@ -58,42 +58,42 @@ func CreateKeywordGroup(tx *gorm.DB) error {
 		{
 			KeywordGroupID: 10,
 			Name:           "AWS",
-			Type:           "tool",
+			Type:           "other",
 		},
 		{
 			KeywordGroupID: 11,
 			Name:           "Docker",
-			Type:           "tool",
+			Type:           "other",
 		},
 		{
 			KeywordGroupID: 12,
 			Name:           "Kubernetes",
-			Type:           "tool",
+			Type:           "other",
 		},
 		{
 			KeywordGroupID: 13,
 			Name:           "MySQL",
-			Type:           "tool",
+			Type:           "other",
 		},
 		{
 			KeywordGroupID: 14,
 			Name:           "PostgreSQL",
-			Type:           "tool",
+			Type:           "other",
 		},
 		{
 			KeywordGroupID: 15,
 			Name:           "設計",
-			Type:           "skill",
+			Type:           "must",
 		},
 		{
 			KeywordGroupID: 16,
 			Name:           "テスト",
-			Type:           "skill",
+			Type:           "must",
 		},
 		{
 			KeywordGroupID: 17,
 			Name:           "レビュー",
-			Type:           "skill",
+			Type:           "must",
 		},
 	}
 

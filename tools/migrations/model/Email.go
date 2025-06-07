@@ -21,6 +21,7 @@ type Email struct {
 	// 子テーブル
 	EmailProject        *EmailProject        `gorm:"foreignKey:EmailID;references:ID"` // 案件情報（1対1）
 	EmailCandidate      *EmailCandidate      `gorm:"foreignKey:EmailID;references:ID"` // 人材情報（1対1）
+	EntryTimings        []EntryTiming        `gorm:"foreignKey:EmailID;references:ID"` // 入場時期（1対多）
 	EmailKeywordGroups  []EmailKeywordGroup  `gorm:"foreignKey:EmailID;references:ID"` // 技術キーワード（1対多）
 	EmailPositionGroups []EmailPositionGroup `gorm:"foreignKey:EmailID;references:ID"` // ポジション（1対多）
 	EmailWorkTypeGroups []EmailWorkTypeGroup `gorm:"foreignKey:EmailID;references:ID"` // 業務内容（1対多）

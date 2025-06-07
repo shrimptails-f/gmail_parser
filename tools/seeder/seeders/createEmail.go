@@ -41,11 +41,11 @@ func CreateEmail(tx *gorm.DB) error {
 				PriceTo:         intPtr(800000),
 				RemoteType:      stringPtr("フルリモート可"),
 				RemoteFrequency: stringPtr("週5日"),
-				// EntryTimingsリレーション
-				EntryTimings: []model.EntryTiming{
-					{EmailProjectID: 1, StartDate: "2024/02/01"},
-					{EmailProjectID: 1, StartDate: "2024/03/01"},
-				},
+			},
+			// EntryTimingsリレーション
+			EntryTimings: []model.EntryTiming{
+				{EmailID: 1, StartDate: "2024/02/01"},
+				{EmailID: 1, StartDate: "2024/03/01"},
 			},
 		},
 		{
@@ -82,11 +82,11 @@ func CreateEmail(tx *gorm.DB) error {
 				PriceTo:         intPtr(1200000),
 				RemoteType:      stringPtr("出社必須"),
 				RemoteFrequency: stringPtr("週5日出社"),
-				// EntryTimingsリレーション
-				EntryTimings: []model.EntryTiming{
-					{EmailProjectID: 3, StartDate: "2024/03/01"},
-					{EmailProjectID: 3, StartDate: "2024/04/01"},
-				},
+			},
+			// EntryTimingsリレーション
+			EntryTimings: []model.EntryTiming{
+				{EmailID: 3, StartDate: "2024/03/01"},
+				{EmailID: 3, StartDate: "2024/04/01"},
 			},
 		},
 		{
@@ -114,11 +114,11 @@ func CreateEmail(tx *gorm.DB) error {
 				PriceTo:         intPtr(1000000),
 				RemoteType:      stringPtr("フルリモート可"),
 				RemoteFrequency: stringPtr("完全リモート"),
-				// EntryTimingsリレーション
-				EntryTimings: []model.EntryTiming{
-					{EmailProjectID: 4, StartDate: "2024/04/01"},
-					{EmailProjectID: 4, StartDate: "2024/05/01"},
-				},
+			},
+			// EntryTimingsリレーション
+			EntryTimings: []model.EntryTiming{
+				{EmailID: 4, StartDate: "2024/04/01"},
+				{EmailID: 4, StartDate: "2024/05/01"},
 			},
 		},
 		{

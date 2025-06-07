@@ -3,23 +3,24 @@
 package main
 
 import (
+	cd "business/internal/common/domain"
+	"business/internal/emailstore/application"
 	emailstoredi "business/internal/emailstore/di"
-	"business/internal/gmail/application"
-	"business/internal/gmail/domain"
-	"business/internal/gmail/infrastructure"
-	aiapp "business/internal/openai/application"
-	openaidomain "business/internal/openai/domain"
-	aiinfra "business/internal/openai/infrastructure"
+	ga "business/internal/gmail/application"
+	gi "business/internal/gmail/infrastructure"
+	aiapp "business/internal/openAi/application"
+	aiinfra "business/internal/openAi/infrastructure"
+	"strconv"
 
+	gc "business/tools/gmail"
+	gs "business/tools/gmailService"
 	"business/tools/logger"
-	"business/tools/mysql"
+	db "business/tools/mysql"
+	oa "business/tools/openai"
+	"business/tools/oswrapper"
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
-
-	"google.golang.org/api/gmail/v1"
 )
 
 func main() {
@@ -35,35 +36,30 @@ func main() {
 	command := os.Args[1]
 	ctx := context.Background()
 
+	osw := oswrapper.New()
+
+	credentialsPath := osw.GetEnv("CLIENT_SECRET_PATH")
+	tokenPath := "/data/credentials/token_user.json"
+	gs := gs.NewClient()
+	svc, err := gs.CreateGmailService(ctx, credentialsPath, tokenPath)
+	if err != nil {
+		fmt.Printf("gメールAPIクライアント生成に失敗しました:%v \n", err)
+		return
+	}
+
 	switch command {
 	case "gmail-auth":
 		// Gmail認証を実行
-		if err := executeGmailAuth(ctx); err != nil {
+		strPort := osw.GetEnv("GMAIL_PORT")
+		port, err := strconv.Atoi(strPort)
+		if err != nil {
+			fmt.Printf("gメールのリダイレクトポートの取得に失敗しました。ENVのGMAIL_PORTを見直してください。: %v \n", err)
+			return
+		}
+		if err := executeGmailAuth(ctx, gs, credentialsPath, port); err != nil {
 			l.Error(fmt.Errorf("gmail認証に失敗しました: %w", err))
 			os.Exit(1)
 		}
-
-	case "gmail-service":
-		// Gmail APIサービスを作成してテスト
-		if err := testGmailService(ctx, l); err != nil {
-			l.Error(fmt.Errorf("gmail APIサービスのテストに失敗しました: %w", err))
-			os.Exit(1)
-		}
-
-	case "gmail-messages":
-		// Gmailメッセージを取得してテスト
-		if err := testGmailMessages(ctx, l); err != nil {
-			l.Error(fmt.Errorf("gmailメッセージの取得に失敗しました: %w", err))
-			os.Exit(1)
-		}
-
-	case "gmail-labels":
-		// Gmailラベル一覧を取得してテスト
-		if err := testGmailLabels(ctx, l); err != nil {
-			l.Error(fmt.Errorf("gmailラベル一覧の取得に失敗しました: %w", err))
-			os.Exit(1)
-		}
-
 	case "gmail-messages-by-label":
 		// ラベル指定でGmailメッセージを取得してテスト
 		if len(os.Args) < 3 {
@@ -71,8 +67,28 @@ func main() {
 			fmt.Println("使用例: go run main.go gmail-messages-by-label 営業/案件")
 			os.Exit(1)
 		}
-		labelPath := os.Args[2]
-		if err := getGmailMessagesByLabel(ctx, l, labelPath); err != nil {
+		label := os.Args[2]
+		fmt.Printf("指定ラベル: %s\n", label)
+
+		gc := gc.NewClient(svc)
+
+		// サービスとユースケースを作成
+		gi := gi.New(gc)
+		ga := ga.New(gi)
+
+		// DB保存機能郡 インスタンス作成
+		dbConn, err := db.New()
+		if err != nil {
+			fmt.Printf("MySQL接続エラー: %v", err)
+			return
+		}
+		es := emailstoredi.ProvideEmailStoreDependencies(dbConn.DB)
+
+		// OpenAi解析機能群 インスタンス作成
+		oa := oa.New(osw.GetEnv("OPENAI_API_KEY"))
+		aiapp := aiapp.NewUseCase(aiinfra.NewAnalyzer(oa), osw)
+
+		if err := getGmailMessagesByLabel(ctx, l, ga, es, *aiapp, label); err != nil {
 			l.Error(fmt.Errorf("ラベル指定gmailメッセージの取得に失敗しました: %w", err))
 			os.Exit(1)
 		}
@@ -83,637 +99,103 @@ func main() {
 }
 
 // executeGmailAuth はGmail認証を実行します
-func executeGmailAuth(ctx context.Context) error {
-	// client-secret.jsonファイルのパスを取得
-	clientSecretPath := getClientSecretPath()
-	if clientSecretPath == "" {
-		return fmt.Errorf("client-secret.jsonファイルが見つかりません。カレントディレクトリまたは環境変数CLIENT_SECRET_PATHで指定してください")
-	}
+func executeGmailAuth(ctx context.Context, gs *gs.Client, credentialsPath string, port int) error {
 
-	// Gmail認証設定を作成
-	config := domain.NewGmailAuthConfig(
-		clientSecretPath,
-		"credentials",
-		"gmailai",
-	)
-
-	// Gmail認証サービスとユースケースを作成
-	gmailAuthService := infrastructure.NewGmailAuthService()
-	gmailAuthUseCase := application.NewGmailAuthUseCase(gmailAuthService)
-
-	// Gmail認証を実行
-	result, err := gmailAuthUseCase.AuthenticateGmail(ctx, *config)
+	result, err := gs.Authenticate(ctx, credentialsPath, port)
 	if err != nil {
 		return err
 	}
 
 	// 認証結果を表示
 	fmt.Printf("Gmail認証成功!\n")
-	fmt.Printf("アプリケーション名: %s\n", result.ApplicationName)
-	fmt.Printf("新規認証: %t\n", result.IsNewAuth)
-	fmt.Printf("アクセストークン: %s...\n", result.Credential.AccessToken[:20])
-	fmt.Printf("トークンタイプ: %s\n", result.Credential.TokenType)
-	fmt.Printf("有効期限: %s\n", result.Credential.ExpiresAt.Format("2006-01-02 15:04:05"))
-
-	return nil
-}
-
-// testGmailService はGmail APIサービスを作成してテストします
-func testGmailService(ctx context.Context, l *logger.Logger) error {
-	// client-secret.jsonファイルのパスを取得
-	clientSecretPath := getClientSecretPath()
-	if clientSecretPath == "" {
-		return fmt.Errorf("client-secret.jsonファイルが見つかりません。カレントディレクトリまたは環境変数CLIENT_SECRET_PATHで指定してください")
-	}
-
-	// Gmail認証設定を作成
-	config := domain.NewGmailAuthConfig(
-		clientSecretPath,
-		"credentials",
-		"gmailai",
-	)
-
-	// Gmail認証サービスとユースケースを作成
-	gmailAuthService := infrastructure.NewGmailAuthService()
-	gmailAuthUseCase := application.NewGmailAuthUseCase(gmailAuthService)
-
-	// Gmail APIサービスを作成
-	service, err := gmailAuthUseCase.CreateGmailService(ctx, *config)
-	if err != nil {
-		return err
-	}
-
-	// Gmail APIサービスをテスト
-	gmailService, ok := service.(*gmail.Service)
-	if !ok {
-		return fmt.Errorf("gmail APIサービスの型変換に失敗しました")
-	}
-
-	// ユーザープロファイルを取得してテスト
-	profile, err := gmailService.Users.GetProfile("me").Do()
-	if err != nil {
-		return fmt.Errorf("ユーザープロファイルの取得に失敗しました: %w", err)
-	}
-
-	// 結果を表示
-	fmt.Printf("Gmail APIサービステスト成功!\n")
-	fmt.Printf("メールアドレス: %s\n", profile.EmailAddress)
-	fmt.Printf("メッセージ総数: %d\n", profile.MessagesTotal)
-	fmt.Printf("スレッド総数: %d\n", profile.ThreadsTotal)
-	fmt.Printf("履歴ID: %d\n", profile.HistoryId)
-
-	return nil
-}
-
-// testGmailMessages はGmailメッセージを取得してテストします
-func testGmailMessages(ctx context.Context, l *logger.Logger) error {
-	// client-secret.jsonファイルのパスを取得
-	clientSecretPath := getClientSecretPath()
-	if clientSecretPath == "" {
-		return fmt.Errorf("client-secret.jsonファイルが見つかりません。カレントディレクトリまたは環境変数CLIENT_SECRET_PATHで指定してください")
-	}
-
-	// Gmail認証設定を作成
-	config := domain.NewGmailAuthConfig(
-		clientSecretPath,
-		"credentials",
-		"gmailai",
-	)
-
-	// サービスとユースケースを作成
-	gmailAuthService := infrastructure.NewGmailAuthService()
-	gmailMessageService := infrastructure.NewGmailMessageService()
-	gmailMessageUseCase := application.NewGmailMessageUseCase(gmailAuthService, gmailMessageService)
-
-	// メッセージ一覧を取得（最大5件）
-	messages, err := gmailMessageUseCase.GetMessages(ctx, *config, 5)
-	if err != nil {
-		return fmt.Errorf("メッセージ一覧の取得に失敗しました: %w", err)
-	}
-
-	// 結果を表示
-	fmt.Printf("Gmailメッセージ取得テスト成功!\n")
-	fmt.Printf("取得したメッセージ数: %d\n\n", len(messages))
-
-	return nil
-}
-
-// testGmailLabels はGmailラベル一覧を取得してテストします
-func testGmailLabels(ctx context.Context, l *logger.Logger) error {
-	// client-secret.jsonファイルのパスを取得
-	clientSecretPath := getClientSecretPath()
-	if clientSecretPath == "" {
-		return fmt.Errorf("client-secret.jsonファイルが見つかりません。カレントディレクトリまたは環境変数CLIENT_SECRET_PATHで指定してください")
-	}
-
-	// Gmail認証設定を作成
-	config := domain.NewGmailAuthConfig(
-		clientSecretPath,
-		"credentials",
-		"gmailai",
-	)
-
-	// サービスとユースケースを作成
-	gmailAuthService := infrastructure.NewGmailAuthService()
-	gmailMessageService := infrastructure.NewGmailMessageService()
-
-	// 認証情報を取得
-	credential, err := gmailAuthService.LoadCredentials(config.CredentialsFolder, config.UserID)
-	if err != nil {
-		return fmt.Errorf("認証情報の読み込みに失敗しました: %w", err)
-	}
-
-	// ラベル一覧を取得
-	labels, err := gmailMessageService.GetLabels(ctx, *credential, config.ApplicationName)
-	if err != nil {
-		return fmt.Errorf("ラベル一覧の取得に失敗しました: %w", err)
-	}
-
-	// 結果を表示
-	fmt.Printf("Gmailラベル一覧取得テスト成功!\n")
-	fmt.Printf("取得したラベル数: %d\n\n", len(labels))
-
-	for i, label := range labels {
-		fmt.Printf("=== ラベル %d ===\n", i+1)
-		fmt.Printf("ID: %s\n", label.ID)
-		fmt.Printf("名前: %s\n", label.Name)
-		fmt.Printf("タイプ: %s\n", label.Type)
-		fmt.Println()
-	}
+	fmt.Printf("アクセストークン: %s...\n", result.AccessToken[:20])
+	fmt.Printf("トークンタイプ: %s\n", result.TokenType)
+	fmt.Printf("有効期限: %v\n", result.ExpiresIn)
 
 	return nil
 }
 
 // getGmailMessagesByLabel はラベル指定でGmailメッセージを取得してテストします
-func getGmailMessagesByLabel(ctx context.Context, l *logger.Logger, labelPath string) error {
-	// client-secret.jsonファイルのパスを取得
-	clientSecretPath := getClientSecretPath()
-	if clientSecretPath == "" {
-		return fmt.Errorf("client-secret.jsonファイルが見つかりません。カレントディレクトリまたは環境変数CLIENT_SECRET_PATHで指定してください")
-	}
+func getGmailMessagesByLabel(ctx context.Context, l *logger.Logger, ga ga.GmailUseCaseInterface, es application.EmailStoreUseCase, aiapp aiapp.UseCase, label string) error {
 
-	// Gmail認証設定を作成
-	config := domain.NewGmailAuthConfig(
-		clientSecretPath,
-		"credentials",
-		"gmailai",
-	)
-
-	// サービスとユースケースを作成
-	gmailAuthService := infrastructure.NewGmailAuthService()
-	gmailMessageService := infrastructure.NewGmailMessageService()
-	gmailMessageUseCase := application.NewGmailMessageUseCase(gmailAuthService, gmailMessageService)
-
-	// ラベル指定で当日0時以降のメッセージを全件取得
-	messages, err := gmailMessageUseCase.GetAllMessagesByLabelPathFromToday(ctx, *config, labelPath, 50)
+	messages, err := ga.GetMessages(ctx, label)
 	if err != nil {
-		return fmt.Errorf("ラベル指定メッセージ一覧の取得に失敗しました: %w", err)
+		fmt.Printf("gメール取得処理失敗: %v", err)
+		return err
 	}
 
 	// 結果を表示
 	fmt.Printf("ラベル指定Gmailメッセージ取得テスト成功!\n")
-	fmt.Printf("指定ラベル: %s\n", labelPath)
 	fmt.Printf("取得したメッセージ数: %d\n\n", len(messages))
 
 	for _, message := range messages {
-		// メール分析を実行
-		if err := analyzeEmailMessage(ctx, &message); err != nil {
-			l.Error(fmt.Errorf("メール分析に失敗しました: %w", err))
-		}
-		fmt.Println()
-	}
 
-	return nil
-}
-
-// truncateString は文字列を指定された長さで切り詰めます
-func truncateString(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	return s[:maxLen] + "..."
-}
-
-// getClientSecretPath はclient-secret.jsonファイルのパスを取得します
-func getClientSecretPath() string {
-	// 環境変数から取得
-	if path := os.Getenv("CLIENT_SECRET_PATH"); path != "" {
-		if _, err := os.Stat(path); err == nil {
-			return path
-		}
-	}
-
-	// カレントディレクトリから検索
-	candidates := []string{
-		"client-secret.json",
-		"credentials/client-secret.json",
-		"../client-secret.json",
-		"../../client-secret.json",
-	}
-
-	for _, candidate := range candidates {
-		absPath, err := filepath.Abs(candidate)
+		// メールIDの存在確認
+		exists, err := es.CheckGmailIdExists(message.ID)
 		if err != nil {
+			return fmt.Errorf("メール存在確認エラー: %w", err)
+		}
+
+		// 既に存在する場合はスキップ
+		if exists {
+			fmt.Printf("メールID %s は既に処理済みです。字句解析をスキップします。\n", message.ID)
 			continue
 		}
-		if _, err := os.Stat(absPath); err == nil {
-			return absPath
+
+		// メール本文の分析を実行
+		analysisResults, err := aiapp.AnalyzeEmailContent(ctx, message.Body)
+		if err != nil {
+			return fmt.Errorf("メール分析エラー: %w", err)
 		}
-	}
 
-	return ""
-}
+		// 解析結果を保存形式へ詰め替える。
+		results := convertToStructs(message, analysisResults)
 
-// analyzeEmailMessage はメールメッセージを分析します
-func analyzeEmailMessage(ctx context.Context, message *domain.GmailMessage) error {
-	// MySQL接続を作成してメールID存在確認
-	mysqlConn, err := mysql.New()
-	if err != nil {
-		return fmt.Errorf("MySQL接続エラー: %w", err)
-	}
+		// DB保存
+		for _, result := range results {
 
-	// EmailStoreUseCaseを作成
-	emailStoreUseCase := emailstoredi.ProvideEmailStoreDependencies(mysqlConn.DB)
-
-	// メールIDの存在確認
-	exists, err := emailStoreUseCase.CheckGmailIdExists(ctx, message.ID)
-	if err != nil {
-		return fmt.Errorf("メール存在確認エラー: %w", err)
-	}
-
-	// 既に存在する場合はスキップ
-	if exists {
-		fmt.Printf("メールID %s は既に処理済みです。字句解析をスキップします。\n", message.ID)
-		return nil
-	}
-
-	// サービスを作成
-	promptService := aiinfra.NewFilePromptService("prompts")
-	// OpenAI APIキーを環境変数から取得
-	apiKey := os.Getenv("OPENAI_API_KEY")
-	if apiKey == "" {
-		return fmt.Errorf("OPENAI_API_KEY環境変数が設定されていません")
-	}
-	textAnalysisService := aiinfra.NewOpenAIService(apiKey)
-	textAnalysisUseCase := aiapp.NewTextAnalysisUseCase(textAnalysisService, promptService)
-
-	// 複数案件対応のメール分析を実行
-	results, err := textAnalysisUseCase.AnalyzeEmailTextMultiple(ctx, message.Body, message.ID, message.Subject)
-	if err != nil {
-		return fmt.Errorf("複数案件メール分析エラー: %w", err)
-	}
-
-	// 複数件対応のDB保存処理を実行
-	if err := saveEmailAnalysisMultipleResults(ctx, message, results); err != nil {
-		return fmt.Errorf("複数案件DB保存エラー: %w", err)
+			if err := es.SaveEmailAnalysisResult(result); err != nil {
+				return fmt.Errorf("複数案件DB保存エラー: %w", err)
+			}
+		}
 	}
 
 	return nil
 }
 
-// saveEmailAnalysisResult はメール分析結果をDBに保存します
-func saveEmailAnalysisResult(ctx context.Context, result *openaidomain.EmailAnalysisResult) error {
-	// MySQL接続を作成
-	mysqlConn, err := mysql.New()
-	if err != nil {
-		return fmt.Errorf("MySQL接続エラー: %w", err)
-	}
+// convertToStructs は引数を結合して保存する形式へ詰め替えます。
+func convertToStructs(message cd.BasicMessage, analysisResults []cd.AnalysisResult) []cd.Email {
+	var results []cd.Email
 
-	// EmailStoreUseCaseを作成
-	emailStoreUseCase := emailstoredi.ProvideEmailStoreDependencies(mysqlConn.DB)
-
-	// メール分析結果を保存
-	if err := emailStoreUseCase.SaveEmailAnalysisResult(ctx, result); err != nil {
-		return fmt.Errorf("メール保存エラー: %w", err)
-	}
-
-	fmt.Printf("メール分析結果をDBに保存しました: %s\n", result.GmailID)
-	return nil
-}
-
-// saveEmailAnalysisMultipleResults は複数案件対応のメール分析結果をDBに保存します
-func saveEmailAnalysisMultipleResults(ctx context.Context, message *domain.GmailMessage, results []*openaidomain.TextAnalysisResult) error {
-	// MySQL接続を作成
-	mysqlConn, err := mysql.New()
-	if err != nil {
-		return fmt.Errorf("MySQL接続エラー: %w", err)
-	}
-
-	// EmailStoreUseCaseを作成
-	emailStoreUseCase := emailstoredi.ProvideEmailStoreDependencies(mysqlConn.DB)
-
-	// 複数案件対応の結果を作成
-	multipleResult := openaidomain.NewEmailAnalysisMultipleResult(
-		message.ID,
-		message.Subject,
-		extractSenderName(message.From),
-		extractEmailAddress(message.From),
-		message.Body,
-		message.Date,
-	)
-
-	// メール区分を設定（デフォルトで案件）
-	multipleResult.MailCategory = "案件"
-
-	// AI解析結果から案件情報を抽出
-	for _, result := range results {
-		// 営業案件メール情報がある場合は案件として追加
-		if hasProjectInfo(result) {
-			project := convertToProjectAnalysisResult(result)
-			multipleResult.AddProject(project)
+	for _, analysisResult := range analysisResults {
+		result := cd.Email{
+			GmailID:             message.ID,
+			ReceivedDate:        message.Date,
+			Summary:             analysisResult.ProjectTitle,
+			Subject:             message.Subject,
+			From:                message.From,
+			FromEmail:           message.ExtractEmailAddress(),
+			Body:                message.Body,
+			Category:            analysisResult.MailCategory,
+			ProjectName:         analysisResult.ProjectTitle,
+			StartPeriod:         analysisResult.StartPeriod,
+			EndPeriod:           analysisResult.EndPeriod,
+			WorkLocation:        analysisResult.WorkLocation,
+			PriceFrom:           analysisResult.PriceFrom,
+			PriceTo:             analysisResult.PriceTo,
+			Languages:           analysisResult.Languages,
+			Frameworks:          analysisResult.Frameworks,
+			Positions:           analysisResult.Positions,
+			WorkTypes:           analysisResult.WorkTypes,
+			RequiredSkillsMust:  analysisResult.RequiredSkillsMust,
+			RequiredSkillsWant:  analysisResult.RequiredSkillsWant,
+			RemoteWorkCategory:  analysisResult.RemoteWorkCategory,
+			RemoteWorkFrequency: analysisResult.RemoteWorkFrequency,
 		}
+		results = append(results, result)
 	}
 
-	// 案件情報がない場合はデフォルトの案件を追加
-	if !multipleResult.HasProjects() {
-		defaultProject := openaidomain.ProjectAnalysisResult{
-			ProjectName:         "不明",
-			StartPeriod:         []string{},
-			EndPeriod:           "",
-			WorkLocation:        "",
-			PriceFrom:           nil,
-			PriceTo:             nil,
-			Languages:           []string{},
-			Frameworks:          []string{},
-			Positions:           []string{},
-			WorkTypes:           []string{},
-			RequiredSkillsMust:  []string{},
-			RequiredSkillsWant:  []string{},
-			RemoteWorkCategory:  "",
-			RemoteWorkFrequency: nil,
-		}
-		multipleResult.AddProject(defaultProject)
-	}
-
-	// 複数案件対応のメール分析結果を保存
-	if err := emailStoreUseCase.SaveEmailAnalysisMultipleResult(ctx, multipleResult); err != nil {
-		return fmt.Errorf("複数案件メール保存エラー: %w", err)
-	}
-
-	fmt.Printf("複数案件対応メール分析結果をDBに保存しました: %s (案件数: %d件)\n", multipleResult.GmailID, multipleResult.GetProjectCount())
-	return nil
-}
-
-// hasProjectInfo は案件情報が含まれているかチェックします
-func hasProjectInfo(result *openaidomain.TextAnalysisResult) bool {
-	// キーワードやエンティティから案件情報を判定
-	return len(result.Keywords) > 0 || len(result.Entities) > 0
-}
-
-// convertToProjectAnalysisResult はTextAnalysisResultを案件分析結果に変換します
-func convertToProjectAnalysisResult(result *openaidomain.TextAnalysisResult) openaidomain.ProjectAnalysisResult {
-	project := openaidomain.ProjectAnalysisResult{
-		ProjectName:         result.Summary, // 要約を案件名として使用
-		StartPeriod:         []string{},
-		EndPeriod:           "",
-		WorkLocation:        "",
-		PriceFrom:           nil,
-		PriceTo:             nil,
-		Languages:           []string{},
-		Frameworks:          []string{},
-		Positions:           []string{},
-		WorkTypes:           []string{},
-		RequiredSkillsMust:  []string{},
-		RequiredSkillsWant:  []string{},
-		RemoteWorkCategory:  "",
-		RemoteWorkFrequency: nil,
-	}
-
-	// デバッグ: RawResponseの内容を確認
-	fmt.Printf("=== デバッグ: RawResponse ===\n")
-	for key, value := range result.RawResponse {
-		fmt.Printf("Key: %s, Value: %+v\n", key, value)
-	}
-	fmt.Printf("========================\n")
-
-	// RawResponseからOpenAIの解析結果を取得
-	if rawResponse, exists := result.RawResponse["email_project"]; exists {
-		// openai_service.goのEmailProjectResponseを使用して型アサーション
-		if emailProject, ok := rawResponse.(aiinfra.EmailProjectResponse); ok {
-			fmt.Printf("=== 構造体として解析成功 ===\n")
-			fmt.Printf("ProjectName: %s\n", emailProject.ProjectName)
-			fmt.Printf("SalaryFrom: %d\n", emailProject.SalaryFrom)
-			fmt.Printf("SalaryTo: %d\n", emailProject.SalaryTo)
-			fmt.Printf("WorkLocation: %s\n", emailProject.WorkLocation)
-
-			// 案件名
-			if emailProject.ProjectName != "" {
-				project.ProjectName = emailProject.ProjectName
-			}
-
-			// 単価FROM
-			if emailProject.SalaryFrom > 0 {
-				project.PriceFrom = &emailProject.SalaryFrom
-			}
-
-			// 単価TO
-			if emailProject.SalaryTo > 0 {
-				project.PriceTo = &emailProject.SalaryTo
-			}
-
-			// 勤務場所
-			if emailProject.WorkLocation != "" {
-				project.WorkLocation = emailProject.WorkLocation
-			}
-
-			// 終了時期
-			if emailProject.EndDate != "" {
-				project.EndPeriod = emailProject.EndDate
-			}
-
-			// 入場時期・開始時期
-			project.StartPeriod = emailProject.StartDates
-
-			// 言語
-			project.Languages = emailProject.Languages
-
-			// フレームワーク
-			project.Frameworks = emailProject.Frameworks
-
-			// ポジション
-			project.Positions = emailProject.Positions
-
-			// 求めるスキル MUST
-			project.RequiredSkillsMust = emailProject.RequiredSkills
-
-			// 求めるスキル WANT
-			project.RequiredSkillsWant = emailProject.PreferredSkills
-
-			// リモートワーク区分
-			if emailProject.RemoteWorkType != "" {
-				project.RemoteWorkCategory = emailProject.RemoteWorkType
-			}
-
-			// リモートワークの頻度
-			if emailProject.RemoteFrequency != "" {
-				project.RemoteWorkFrequency = &emailProject.RemoteFrequency
-			}
-		} else if emailProject, ok := rawResponse.(map[string]interface{}); ok {
-			// 案件名
-			if projectName, ok := emailProject["案件名"].(string); ok && projectName != "" {
-				project.ProjectName = projectName
-			}
-
-			// 単価FROM
-			if salaryFrom, ok := emailProject["単価FROM"]; ok {
-				switch v := salaryFrom.(type) {
-				case float64:
-					if v > 0 {
-						intValue := int(v)
-						project.PriceFrom = &intValue
-					}
-				case int:
-					if v > 0 {
-						project.PriceFrom = &v
-					}
-				}
-			}
-
-			// 単価TO
-			if salaryTo, ok := emailProject["単価TO"]; ok {
-				switch v := salaryTo.(type) {
-				case float64:
-					if v > 0 {
-						intValue := int(v)
-						project.PriceTo = &intValue
-					}
-				case int:
-					if v > 0 {
-						project.PriceTo = &v
-					}
-				}
-			}
-
-			// 勤務場所
-			if workLocation, ok := emailProject["勤務場所"].(string); ok && workLocation != "" {
-				project.WorkLocation = workLocation
-			}
-
-			// 終了時期
-			if endDate, ok := emailProject["終了時期"].(string); ok && endDate != "" {
-				project.EndPeriod = endDate
-			}
-
-			// 入場時期・開始時期
-			if startDates, ok := emailProject["入場時期・開始時期"]; ok {
-				if startDatesArray, ok := startDates.([]interface{}); ok {
-					for _, startDate := range startDatesArray {
-						if startDateStr, ok := startDate.(string); ok && startDateStr != "" {
-							project.StartPeriod = append(project.StartPeriod, startDateStr)
-						}
-					}
-				}
-			}
-
-			// 言語
-			if languages, ok := emailProject["言語"]; ok {
-				if languagesArray, ok := languages.([]interface{}); ok {
-					for _, lang := range languagesArray {
-						if langStr, ok := lang.(string); ok && langStr != "" {
-							project.Languages = append(project.Languages, langStr)
-						}
-					}
-				}
-			}
-
-			// フレームワーク
-			if frameworks, ok := emailProject["フレームワーク"]; ok {
-				if frameworksArray, ok := frameworks.([]interface{}); ok {
-					for _, fw := range frameworksArray {
-						if fwStr, ok := fw.(string); ok && fwStr != "" {
-							project.Frameworks = append(project.Frameworks, fwStr)
-						}
-					}
-				}
-			}
-
-			// ポジション
-			if positions, ok := emailProject["ポジション"]; ok {
-				if positionsArray, ok := positions.([]interface{}); ok {
-					for _, pos := range positionsArray {
-						if posStr, ok := pos.(string); ok && posStr != "" {
-							project.Positions = append(project.Positions, posStr)
-						}
-					}
-				}
-			}
-
-			// 求めるスキル MUST
-			if mustSkills, ok := emailProject["求めるスキル MUST"]; ok {
-				if mustSkillsArray, ok := mustSkills.([]interface{}); ok {
-					for _, skill := range mustSkillsArray {
-						if skillStr, ok := skill.(string); ok && skillStr != "" {
-							project.RequiredSkillsMust = append(project.RequiredSkillsMust, skillStr)
-						}
-					}
-				}
-			}
-
-			// 求めるスキル WANT
-			if wantSkills, ok := emailProject["求めるスキル WANT"]; ok {
-				if wantSkillsArray, ok := wantSkills.([]interface{}); ok {
-					for _, skill := range wantSkillsArray {
-						if skillStr, ok := skill.(string); ok && skillStr != "" {
-							project.RequiredSkillsWant = append(project.RequiredSkillsWant, skillStr)
-						}
-					}
-				}
-			}
-
-			// リモートワーク区分
-			if remoteType, ok := emailProject["リモートワーク区分"].(string); ok && remoteType != "" {
-				project.RemoteWorkCategory = remoteType
-			}
-
-			// リモートワークの頻度
-			if remoteFreq, ok := emailProject["リモートワークの頻度"].(string); ok && remoteFreq != "" {
-				project.RemoteWorkFrequency = &remoteFreq
-			}
-		}
-	}
-
-	// フォールバック: キーワードから技術情報を抽出（OpenAIの解析結果がない場合）
-	if len(project.Languages) == 0 && len(project.Frameworks) == 0 {
-		for _, keyword := range result.Keywords {
-			switch keyword.Category {
-			case "言語":
-				project.Languages = append(project.Languages, keyword.Text)
-			case "フレームワーク":
-				project.Frameworks = append(project.Frameworks, keyword.Text)
-			}
-		}
-	}
-
-	// フォールバック: エンティティからポジション情報を抽出（OpenAIの解析結果がない場合）
-	if len(project.Positions) == 0 {
-		for _, entity := range result.Entities {
-			if entity.Type == "POSITION" {
-				project.Positions = append(project.Positions, entity.Name)
-			}
-		}
-	}
-
-	return project
-}
-
-// extractSenderName は送信者情報から名前を抽出します
-func extractSenderName(from string) string {
-	// 簡単な実装："<"より前の部分を名前とする
-	if idx := strings.Index(from, "<"); idx > 0 {
-		return strings.TrimSpace(from[:idx])
-	}
-	return from
-}
-
-// extractEmailAddress は送信者情報からメールアドレスを抽出します
-func extractEmailAddress(from string) string {
-	// 簡単な実装："<"と">"の間の部分をメールアドレスとする
-	start := strings.Index(from, "<")
-	end := strings.Index(from, ">")
-	if start >= 0 && end > start {
-		return from[start+1 : end]
-	}
-	return from
+	return results
 }
 
 func printUsage() {
