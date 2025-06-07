@@ -4,6 +4,7 @@ package main
 
 import (
 	cd "business/internal/common/domain"
+	"business/internal/emailstore/application"
 	emailstoredi "business/internal/emailstore/di"
 	ga "business/internal/gmail/application"
 	gd "business/internal/gmail/domain"
@@ -73,7 +74,26 @@ func main() {
 			os.Exit(1)
 		}
 		labelPath := os.Args[2]
-		if err := getGmailMessagesByLabel(ctx, l, labelPath); err != nil {
+
+		// サービスとユースケースを作成
+		gmailAuthService := gi.NewGmailAuthService()
+		gmailMessageService := gi.NewGmailMessageService()
+		gapp := ga.NewGmailMessageUseCase(gmailAuthService, gmailMessageService)
+
+		// DB保存機能郡 インスタンス作成
+		dbConn, err := db.New()
+		if err != nil {
+			fmt.Printf("MySQL接続エラー: %v", err)
+			return
+		}
+		es := emailstoredi.ProvideEmailStoreDependencies(dbConn.DB)
+
+		// OpenAi解析機能群 インスタンス作成
+		osw := osw.New()
+		oa := oa.New(osw.GetEnv("OPENAI_API_KEY"))
+		aiapp := aiapp.NewUseCase(aiinfra.NewAnalyzer(oa), osw)
+
+		if err := getGmailMessagesByLabel(ctx, l, gapp, es, *aiapp, labelPath); err != nil {
 			l.Error(fmt.Errorf("ラベル指定gmailメッセージの取得に失敗しました: %w", err))
 			os.Exit(1)
 		}
@@ -246,7 +266,7 @@ func testGmailLabels(ctx context.Context, l *logger.Logger) error {
 }
 
 // getGmailMessagesByLabel はラベル指定でGmailメッセージを取得してテストします
-func getGmailMessagesByLabel(ctx context.Context, l *logger.Logger, labelPath string) error {
+func getGmailMessagesByLabel(ctx context.Context, l *logger.Logger, ga ga.GmailMessageUseCase, es application.EmailStoreUseCase, aiapp aiapp.UseCase, labelPath string) error {
 	// client-secret.jsonファイルのパスを取得
 	clientSecretPath := getClientSecretPath()
 	if clientSecretPath == "" {
@@ -260,13 +280,8 @@ func getGmailMessagesByLabel(ctx context.Context, l *logger.Logger, labelPath st
 		"gmailai",
 	)
 
-	// サービスとユースケースを作成
-	gmailAuthService := gi.NewGmailAuthService()
-	gmailMessageService := gi.NewGmailMessageService()
-	gmailMessageUseCase := ga.NewGmailMessageUseCase(gmailAuthService, gmailMessageService)
-
 	// ラベル指定で当日0時以降のメッセージを全件取得
-	messages, err := gmailMessageUseCase.GetAllMessagesByLabelPathFromToday(ctx, *config, labelPath, 50)
+	messages, err := ga.GetAllMessagesByLabelPathFromToday(ctx, *config, labelPath, 50)
 	if err != nil {
 		return fmt.Errorf("ラベル指定メッセージ一覧の取得に失敗しました: %w", err)
 	}
@@ -275,59 +290,6 @@ func getGmailMessagesByLabel(ctx context.Context, l *logger.Logger, labelPath st
 	fmt.Printf("ラベル指定Gmailメッセージ取得テスト成功!\n")
 	fmt.Printf("指定ラベル: %s\n", labelPath)
 	fmt.Printf("取得したメッセージ数: %d\n\n", len(messages))
-
-	// メール分析を実行
-	if err := analyzeEmailMessage(ctx, messages); err != nil {
-		l.Error(fmt.Errorf("メール分析に失敗しました: %w", err))
-	}
-	fmt.Println()
-
-	return nil
-}
-
-// getClientSecretPath はclient-secret.jsonファイルのパスを取得します
-func getClientSecretPath() string {
-	// 環境変数から取得
-	if path := os.Getenv("CLIENT_SECRET_PATH"); path != "" {
-		if _, err := os.Stat(path); err == nil {
-			return path
-		}
-	}
-
-	// カレントディレクトリから検索
-	candidates := []string{
-		"client-secret.json",
-		"credentials/client-secret.json",
-		"../client-secret.json",
-		"../../client-secret.json",
-	}
-
-	for _, candidate := range candidates {
-		absPath, err := filepath.Abs(candidate)
-		if err != nil {
-			continue
-		}
-		if _, err := os.Stat(absPath); err == nil {
-			return absPath
-		}
-	}
-
-	return ""
-}
-
-// analyzeEmailMessage はメールメッセージを分析します
-func analyzeEmailMessage(ctx context.Context, messages []gd.GmailMessage) error {
-	// DB保存機能郡 インスタンス作成
-	dbConn, err := db.New()
-	if err != nil {
-		return fmt.Errorf("MySQL接続エラー: %w", err)
-	}
-	es := emailstoredi.ProvideEmailStoreDependencies(dbConn.DB)
-
-	// OpenAi解析機能群 インスタンス作成
-	osw := osw.New()
-	oa := oa.New(osw.GetEnv("OPENAI_API_KEY"))
-	aiapp := aiapp.NewUseCase(aiinfra.NewAnalyzer(oa), osw)
 
 	for _, message := range messages {
 
@@ -362,6 +324,36 @@ func analyzeEmailMessage(ctx context.Context, messages []gd.GmailMessage) error 
 	}
 
 	return nil
+}
+
+// getClientSecretPath はclient-secret.jsonファイルのパスを取得します
+func getClientSecretPath() string {
+	// 環境変数から取得
+	if path := os.Getenv("CLIENT_SECRET_PATH"); path != "" {
+		if _, err := os.Stat(path); err == nil {
+			return path
+		}
+	}
+
+	// カレントディレクトリから検索
+	candidates := []string{
+		"client-secret.json",
+		"credentials/client-secret.json",
+		"../client-secret.json",
+		"../../client-secret.json",
+	}
+
+	for _, candidate := range candidates {
+		absPath, err := filepath.Abs(candidate)
+		if err != nil {
+			continue
+		}
+		if _, err := os.Stat(absPath); err == nil {
+			return absPath
+		}
+	}
+
+	return ""
 }
 
 // convertToStructs は引数を結合して保存する形式へ詰め替えます。
