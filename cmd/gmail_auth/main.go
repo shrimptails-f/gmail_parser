@@ -5,7 +5,6 @@ package main
 import (
 	cd "business/internal/common/domain"
 	emailstoredi "business/internal/emailstore/di"
-	ed "business/internal/emailstore/domain"
 	ga "business/internal/gmail/application"
 	gd "business/internal/gmail/domain"
 	gi "business/internal/gmail/infrastructure"
@@ -366,11 +365,11 @@ func analyzeEmailMessage(ctx context.Context, messages []gd.GmailMessage) error 
 }
 
 // convertToStructs は引数を結合して保存する形式へ詰め替えます。
-func convertToStructs(message gd.GmailMessage, analysisResults []cd.AnalysisResult) []ed.AnalysisResult {
-	var results []ed.AnalysisResult
+func convertToStructs(message gd.GmailMessage, analysisResults []cd.AnalysisResult) []cd.Email {
+	var results []cd.Email
 
 	for _, analysisResult := range analysisResults {
-		result := ed.AnalysisResult{
+		result := cd.Email{
 			GmailID:             message.ID,
 			ReceivedDate:        message.Date,
 			Summary:             analysisResult.ProjectTitle,

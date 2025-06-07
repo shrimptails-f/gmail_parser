@@ -2,7 +2,7 @@
 package application
 
 import (
-	"business/internal/emailstore/domain"
+	cd "business/internal/common/domain"
 	r "business/internal/emailstore/infrastructure"
 	"testing"
 	"time"
@@ -16,14 +16,14 @@ type MockEmailStoreRepository struct {
 	mock.Mock
 }
 
-func (m *MockEmailStoreRepository) SaveEmail(result r.Email) error {
+func (m *MockEmailStoreRepository) SaveEmail(result cd.Email) error {
 	args := m.Called(result)
 	return args.Error(0)
 }
 
-func (m *MockEmailStoreRepository) GetEmailByGmailId(gmail_id string) (*domain.Email, error) {
+func (m *MockEmailStoreRepository) GetEmailByGmailId(gmail_id string) (r.Email, error) {
 	args := m.Called(gmail_id)
-	return args.Get(0).(*domain.Email), args.Error(1)
+	return args.Get(0).(r.Email), args.Error(1)
 }
 
 func (m *MockEmailStoreRepository) EmailExists(id string) (bool, error) {
@@ -67,7 +67,7 @@ func TestEmailStoreUseCaseImpl_SaveEmailAnalysisResult(t *testing.T) {
 	tt := struct {
 		name          string
 		setupMock     func(*MockEmailStoreRepository)
-		input         *domain.AnalysisResult
+		input         cd.Email
 		expectedError string
 	}{
 		name: "正常系_新規メール保存成功",
@@ -86,7 +86,7 @@ func TestEmailStoreUseCaseImpl_SaveEmailAnalysisResult(t *testing.T) {
 			mockRepo.On("SaveEmail", mock.Anything).Return(nil).Once()
 		},
 
-		input: &domain.AnalysisResult{
+		input: cd.Email{
 			GmailID:            "test-email-id",
 			Subject:            "テスト件名",
 			From:               "田中 太郎 <sender@example.com>",
@@ -113,7 +113,7 @@ func TestEmailStoreUseCaseImpl_SaveEmailAnalysisResult(t *testing.T) {
 		mockRepo := new(MockEmailStoreRepository)
 		tt.setupMock(mockRepo)
 		useCase := NewEmailStoreUseCase(mockRepo)
-		err := useCase.SaveEmailAnalysisResult(*tt.input)
+		err := useCase.SaveEmailAnalysisResult(tt.input)
 
 		if tt.expectedError == "" {
 			assert.NoError(t, err)

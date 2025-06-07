@@ -3,16 +3,16 @@
 package infrastructure
 
 import (
-	"business/internal/emailstore/domain"
+	cd "business/internal/common/domain"
 )
 
 // EmailStoreRepository はメール保存のリポジトリインターフェースです
 type EmailStoreRepository interface {
 	// SaveEmail はメール分析結果をデータベースに保存します
-	SaveEmail(result Email) error
+	SaveEmail(result cd.Email) error
 
 	// GetEmailByGmailId はIDでメールを取得します
-	GetEmailByGmailId(gmail_id string) (*domain.Email, error)
+	GetEmailByGmailId(gmail_id string) (Email, error)
 
 	// EmailExists はメールが既に存在するかチェックします
 	EmailExists(id string) (bool, error)

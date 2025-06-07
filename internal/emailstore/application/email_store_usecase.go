@@ -3,13 +3,11 @@
 package application
 
 import (
+	cd "business/internal/common/domain"
 	"business/internal/emailstore/domain"
 	r "business/internal/emailstore/infrastructure"
-	"errors"
 	"fmt"
 	"strings"
-
-	"gorm.io/gorm"
 )
 
 // EmailStoreUseCaseImpl はメール保存のユースケース実装です
@@ -25,60 +23,60 @@ func NewEmailStoreUseCase(r r.EmailStoreRepository) *EmailStoreUseCaseImpl {
 }
 
 // SaveEmailAnalysisResult はメール分析結果を保存します
-func (u *EmailStoreUseCaseImpl) SaveEmailAnalysisResult(result domain.AnalysisResult) error {
-	// 言語のチェック
-	notExistLanguages, err := u.filterNotExistingWords(result.Languages)
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		fmt.Println("言語の存在確認でエラーが発生しました。")
-		return err
-	}
-	emailKeywordGroups := u.buildKeywordEntities(notExistLanguages, "language")
+func (u *EmailStoreUseCaseImpl) SaveEmailAnalysisResult(result cd.Email) error {
+	// // 言語のチェック
+	// notExistLanguages, err := u.filterNotExistingWords(result.Languages)
+	// if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+	// 	fmt.Println("言語の存在確認でエラーが発生しました。")
+	// 	return err
+	// }
+	// emailKeywordGroups := u.buildKeywordEntities(notExistLanguages, "language")
 
-	// フレームワークのチェック
-	notExistFrameworks, err := u.filterNotExistingWords(result.Frameworks)
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		fmt.Println("フレームワークの存在確認でエラーが発生しました。")
-		return err
-	}
-	emailKeywordGroups = append(emailKeywordGroups, u.buildKeywordEntities(notExistFrameworks, "framework")...)
+	// // フレームワークのチェック
+	// notExistFrameworks, err := u.filterNotExistingWords(result.Frameworks)
+	// if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+	// 	fmt.Println("フレームワークの存在確認でエラーが発生しました。")
+	// 	return err
+	// }
+	// emailKeywordGroups = append(emailKeywordGroups, u.buildKeywordEntities(notExistFrameworks, "framework")...)
 
-	// 必須スキルのチェック
-	notExistRequiredSkillsMust, err := u.filterNotExistingWords(result.RequiredSkillsMust)
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		fmt.Println("必須スキルの存在確認でエラーが発生しました。")
-		return err
-	}
-	emailKeywordGroups = append(emailKeywordGroups, u.buildKeywordEntities(notExistRequiredSkillsMust, "must")...)
+	// // 必須スキルのチェック
+	// notExistRequiredSkillsMust, err := u.filterNotExistingWords(result.RequiredSkillsMust)
+	// if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+	// 	fmt.Println("必須スキルの存在確認でエラーが発生しました。")
+	// 	return err
+	// }
+	// emailKeywordGroups = append(emailKeywordGroups, u.buildKeywordEntities(notExistRequiredSkillsMust, "must")...)
 
-	// 尚可のチェック
-	notExistRequiredSkillsWant, err := u.filterNotExistingWords(result.RequiredSkillsWant)
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		fmt.Println("尚可スキルの存在確認でエラーが発生しました。")
-		return err
-	}
-	emailKeywordGroups = append(emailKeywordGroups, u.buildKeywordEntities(notExistRequiredSkillsWant, "want")...)
+	// // 尚可のチェック
+	// notExistRequiredSkillsWant, err := u.filterNotExistingWords(result.RequiredSkillsWant)
+	// if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+	// 	fmt.Println("尚可スキルの存在確認でエラーが発生しました。")
+	// 	return err
+	// }
+	// emailKeywordGroups = append(emailKeywordGroups, u.buildKeywordEntities(notExistRequiredSkillsWant, "want")...)
 
-	// ポジションチェック
-	notExistPositionWords, err := u.filterNotExistingPositionWords(result.Positions)
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		fmt.Println("ポジションの存在確認でエラーが発生しました。")
-		return err
-	}
-	emailPositionGroups := u.buildPositionEntities(notExistPositionWords)
+	// // ポジションチェック
+	// notExistPositionWords, err := u.filterNotExistingPositionWords(result.Positions)
+	// if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+	// 	fmt.Println("ポジションの存在確認でエラーが発生しました。")
+	// 	return err
+	// }
+	// emailPositionGroups := u.buildPositionEntities(notExistPositionWords)
 
-	// 業種チェック
-	notExistWorkTypeWords, err := u.filterNotExistingWorkTypeWords(result.WorkTypes)
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		fmt.Println("ポジションの存在確認でエラーが発生しました。")
-		return err
-	}
-	emailWorkTypeGroups := u.buildWorkTypeEntities(notExistWorkTypeWords)
+	// // 業種チェック
+	// notExistWorkTypeWords, err := u.filterNotExistingWorkTypeWords(result.WorkTypes)
+	// if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+	// 	fmt.Println("ポジションの存在確認でエラーが発生しました。")
+	// 	return err
+	// }
+	// emailWorkTypeGroups := u.buildWorkTypeEntities(notExistWorkTypeWords)
 
-	// 引数の情報を保存用の構造体に詰め替える。
-	email := convertToProjectAnalysisResult(result, emailKeywordGroups, emailPositionGroups, emailWorkTypeGroups)
+	// // 引数の情報を保存用の構造体に詰め替える。
+	// email := convertToProjectAnalysisResult(result, emailKeywordGroups, emailPositionGroups, emailWorkTypeGroups)
 
 	// リポジトリを使用してメールを保存
-	if err := u.r.SaveEmail(email); err != nil {
+	if err := u.r.SaveEmail(result); err != nil {
 		return fmt.Errorf("メール保存エラー: %w", err)
 	}
 

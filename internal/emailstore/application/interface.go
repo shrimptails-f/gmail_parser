@@ -3,13 +3,13 @@
 package application
 
 import (
-	"business/internal/emailstore/domain"
+	cd "business/internal/common/domain"
 )
 
 // EmailStoreUseCase はメール保存のユースケースインターフェースです
 type EmailStoreUseCase interface {
 	// SaveEmailAnalysisResult はメール分析結果を保存します
-	SaveEmailAnalysisResult(result domain.AnalysisResult) error
+	SaveEmailAnalysisResult(result cd.Email) error
 
 	// CheckGmailExists はGメールIDの存在チェックを行います
 	CheckGmailIdExists(gmailId string) (bool, error)
