@@ -5,6 +5,16 @@ import (
 	"time"
 )
 
+// BasicMessage はメッセージの基本モデルです
+type BasicMessage struct {
+	ID      string    `json:"id"`
+	Subject string    `json:"subject"`
+	From    string    `json:"from"`
+	To      []string  `json:"to"`
+	Date    time.Time `json:"date"`
+	Body    string    `json:"body"`
+}
+
 // AnalysisResult は全メール共通の基本情報を表すドメインモデルです
 type AnalysisResult struct {
 	MailCategory        string   `json:"メール区分"`
