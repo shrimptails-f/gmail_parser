@@ -27,9 +27,22 @@
             "command": "task gmail-messages-by-label -- 0"
         },
         {
-            "label": "昨日分から取得 gmail取得→AI字句解析→DB保存",
-            "type": "shell",
-            "command": "task gmail-messages-by-label -- -1"
+          "label": "(任意日数前から gmail取得→AI字句解析→DB保存",
+          "type": "shell",
+          "command": "task gmail-messages-by-label -- ${input:sinceDaysAgo}",
+          "problemMatcher": [],
+          "presentation": {
+            "echo": true,
+            "reveal": "always"
+          }
         },
-    ]
+    ],
+     "inputs": [
+       {
+         "id": "sinceDaysAgo",
+         "type": "promptString",
+         "description": "何日前から取得しますか？当日分:0 前日分:-1",
+         "default": "1"
+       },
+    ],
 }

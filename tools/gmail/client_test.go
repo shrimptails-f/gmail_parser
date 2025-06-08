@@ -80,7 +80,7 @@ func TestGetGmailByLabel(t *testing.T) {
 	}
 
 	client := NewClient(svc)
-	messages, err := client.GetMessagesByLabelName(ctx, "営業/テスト")
+	messages, err := client.GetMessagesByLabelName(ctx, "営業/テスト", 0)
 	if err != nil {
 		t.Fatalf("ラベル取得失敗: %v\n", err)
 	}
