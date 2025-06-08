@@ -1,6 +1,4 @@
-// Package infrastructure は認証機能のインフラストラクチャ層を提供します。
-// このファイルはHTML処理のユーティリティ関数を定義します。
-package infrastructure
+package gmail
 
 import (
 	"regexp"
