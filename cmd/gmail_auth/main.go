@@ -134,6 +134,8 @@ func main() {
 			if exists {
 				fmt.Printf("メールID %s は既に処理済みです。字句解析をスキップします。\n", message.ID)
 				continue
+			} else {
+				fmt.Printf("メールID %s を解析します。 \n", message.ID)
 			}
 
 			// メール本文の分析を実行

@@ -80,8 +80,8 @@ type EntryTiming struct {
 
 // EmailKeywordGroup はEmailとKeywordGroupの多対多中間テーブルを表すドメインモデルです
 type EmailKeywordGroup struct {
-	EmailID        uint      `gorm:"not null;uniqueIndex:idx_email_keyword_type"`
-	KeywordGroupID uint      `gorm:"not null;uniqueIndex:idx_email_keyword_type"`
+	EmailID        uint      `gorm:"not null;"`
+	KeywordGroupID uint      `gorm:"not null;"`
 	CreatedAt      time.Time // 登録日時
 
 	// リレーション
@@ -91,7 +91,7 @@ type EmailKeywordGroup struct {
 // KeywordGroup は正規化された技術キーワードのマスタを表すドメインモデルです
 type KeywordGroup struct {
 	KeywordGroupID uint   `gorm:"primaryKey;autoIncrement"`
-	Name           string `gorm:"unique;size:255;not null"`
+	Name           string `gorm:"size:255;not null"`
 	Type           string `gorm:"type:enum('language','framework','must','want','other');not null"`
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
