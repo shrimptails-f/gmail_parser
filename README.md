@@ -21,7 +21,7 @@
 ## メール収集方法(環境構築後)
 以下のコマンドでGメールを取得→AIで解析→DB保存ができます。
 ```bash
-task gmail-messages-by-label
+task gmail-messages-by-label -- 0
 ```
 ## テーブル作成とデータ投入手順
 テーブル作成とデータ投入は[こちら](./docs/migration.md) を参照してください。
