@@ -20,6 +20,10 @@ type Email struct {
 	CreatedAt    time.Time `json:"created_at"`                         // 作成日時
 	UpdatedAt    time.Time `json:"updated_at"`                         // 更新日時
 
+	IsRead bool `gorm:"not null;default:false"` // 既読
+	IsGood bool `gorm:"not null;default:false"` // いいね
+	IsBad  bool `gorm:"not null;default:false"` // びみょうかも
+
 	// 子テーブル
 	EmailProject        *EmailProject        `gorm:"foreignKey:EmailID;references:ID" json:"email_project"`          // 案件情報（1対1）
 	EmailCandidate      *EmailCandidate      `gorm:"foreignKey:EmailID;references:ID" json:"email_candidate"`        // 人材情報（1対1）

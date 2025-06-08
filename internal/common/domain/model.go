@@ -62,6 +62,10 @@ type Email struct {
 	FromEmail    string    `json:"from_email"`
 	Body         string    `json:"body"`
 
+	IsRead bool `json:"is_read"` // 既読
+	IsGood bool `json:"is_good"` // いいね
+	IsBad  bool `json:"is_bad"`  // びみょうかも
+
 	Category            string   `json:"メール区分"`
 	ProjectName         string   `json:"案件名"`
 	StartPeriod         []string `json:"開始時期"`

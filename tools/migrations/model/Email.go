@@ -15,6 +15,10 @@ type Email struct {
 	Body         *string   `gorm:"type:longtext"`            // 本文
 	Category     string    `gorm:"size:50;index"`            // 種別（案件 / 人材提案）
 
+	IsRead bool `gorm:"not null;default:false"` // 既読
+	IsGood bool `gorm:"not null;default:false"` // いいね
+	IsBad  bool `gorm:"not null;default:false"` // びみょうかも
+
 	CreatedAt time.Time // 作成日時
 	UpdatedAt time.Time // 更新日時
 
