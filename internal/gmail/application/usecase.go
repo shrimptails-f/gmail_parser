@@ -19,6 +19,6 @@ func New(r gi.GmailConnectInterface) *GmailUseCase {
 	}
 }
 
-func (g *GmailUseCase) GetMessages(ctx context.Context, labelName string) ([]cd.BasicMessage, error) {
-	return g.r.GetMessages(ctx, labelName)
+func (g *GmailUseCase) GetMessages(ctx context.Context, labelName string, sinceDaysAgo int) ([]cd.BasicMessage, error) {
+	return g.r.GetMessages(ctx, labelName, sinceDaysAgo)
 }

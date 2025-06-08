@@ -36,7 +36,7 @@ func (c *Client) ListMessageIDs(ctx context.Context, max int64) ([]string, error
 	}
 	return ids, nil
 }
-func (c *Client) GetMessagesByLabelName(ctx context.Context, labelName string) ([]cd.BasicMessage, error) {
+func (c *Client) GetMessagesByLabelName(ctx context.Context, labelName string, sinceDaysAgo int) ([]cd.BasicMessage, error) {
 	user := "me"
 
 	// ラベルID取得
@@ -58,7 +58,9 @@ func (c *Client) GetMessagesByLabelName(ctx context.Context, labelName string) (
 	// 検索条件（FROM: 6日前〜）
 	now := time.Now()
 	start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
-	start = start.AddDate(0, 0, -3)
+	if sinceDaysAgo != 0 {
+		start = start.AddDate(0, 0, sinceDaysAgo)
+	}
 	query := fmt.Sprintf("after:%d", start.Unix())
 
 	// ページングしながら取得

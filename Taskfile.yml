@@ -95,4 +95,4 @@ tasks:
     env:
       LABEL: "{{.LABEL}}"
     cmds:
-      - go run ./cmd/gmail_auth/main.go gmail-messages-by-label "$LABEL"
+      - go run ./cmd/gmail_auth/main.go gmail-messages-by-label "$LABEL" {{ .CLI_ARGS }}
