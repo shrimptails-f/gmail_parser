@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"go.uber.org/dig"
 )
@@ -85,6 +86,13 @@ func main() {
 			fmt.Printf("引数の日付調整値の数値変換に失敗しました。引数を確認してください。: %v \n", err)
 			return
 		}
+
+		now := time.Now()
+		start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+		if sinceDaysAgo != 0 {
+			start = start.AddDate(0, 0, sinceDaysAgo)
+		}
+		fmt.Printf("%s以降のメールを取得します\n", start.Format("2006-01-02 15:04"))
 
 		if len(os.Args) < 4 {
 			fmt.Println("エラー: 何日前から取得するか指定してください")

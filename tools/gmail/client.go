@@ -55,7 +55,7 @@ func (c *Client) GetMessagesByLabelName(ctx context.Context, labelName string, s
 		return nil, fmt.Errorf("ラベル '%s' が見つかりませんでした", labelName)
 	}
 
-	// 検索条件（FROM: 6日前〜）
+	// 検索条件
 	now := time.Now()
 	start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
 	if sinceDaysAgo != 0 {

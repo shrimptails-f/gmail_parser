@@ -24,12 +24,12 @@
         {
             "label": "当日分取得 gmail取得→AI字句解析→DB保存",
             "type": "shell",
-            "command": "task gmail-messages-by-label 0"
+            "command": "task gmail-messages-by-label -- 0"
         },
         {
             "label": "昨日分から取得 gmail取得→AI字句解析→DB保存",
             "type": "shell",
-            "command": "task gmail-messages-by-label -1"
+            "command": "task gmail-messages-by-label -- -1"
         },
     ]
 }

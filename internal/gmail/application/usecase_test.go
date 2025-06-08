@@ -16,7 +16,7 @@ type mockGmailConnect struct {
 	Err      error
 }
 
-func (m *mockGmailConnect) GetMessages(ctx context.Context, labelName string) ([]cd.BasicMessage, error) {
+func (m *mockGmailConnect) GetMessages(ctx context.Context, labelName string, sinceDaysAgo int) ([]cd.BasicMessage, error) {
 	return m.Messages, m.Err
 }
 
@@ -41,7 +41,7 @@ func TestGmailConnect_GetMessages(t *testing.T) {
 
 	conn := New(client)
 
-	result, err := conn.GetMessages(ctx, "INBOX")
+	result, err := conn.GetMessages(ctx, "INBOX", 0)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(result))
 	assert.Equal(t, "abc123", result[0].ID)
