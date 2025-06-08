@@ -13,7 +13,7 @@
 2. https://console.developers.google.com/apis/library にアクセスし、「Gmail API」で検索→Gmail-apiを有効化する。
 4. 「https://console.cloud.google.com/apis/credentials にアクセスし、認証情報を作成→OAuthクライアントIDを選択する。
 5. アプリケーションの種類として「ウェブアプリケーション」を選択
-6. 承認済みのリダイレクトURIに `http://localhost:8080/auth/google/callback` を追加
+6. 承認済みのリダイレクトURIに `http://localhost:5555/Callback` を追加
 7. 秘密鍵をJSONでダウンロード あとで使います。
 
 ## ソースをクローン
@@ -36,6 +36,7 @@ cp /data/prompts/text_analysis_prompt_sample.txt /data/prompts/text_analysis_pro
 CLIENT_SECRET_PATH=/data/ダウンロードしたファイル名を記載
 OPENAI_API_KEY=生成したOpenAiのAPIキーを記載
 LABEL=案件メールが振分済のラベル名を記載
+GMAIL_PORT=5555
 ```
 ## VsCodeでプロジェクトフォルダーを開く
 ## Reopen in Containerを押下
