@@ -10,5 +10,5 @@ import (
 // GmailConnectInterface はGメール取得のインターフェースです。
 type GmailConnectInterface interface {
 	// GetMessages はラベルからメールを取得します。
-	GetMessages(ctx context.Context, labelName string) ([]cd.BasicMessage, error)
+	GetMessages(ctx context.Context, labelName string, sinceDaysAgo int) ([]cd.BasicMessage, error)
 }

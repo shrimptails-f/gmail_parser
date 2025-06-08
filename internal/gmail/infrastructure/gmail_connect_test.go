@@ -20,7 +20,7 @@ func (m *mockClient) ListMessageIDs(ctx context.Context, max int64) ([]string, e
 	return nil, nil
 }
 
-func (m *mockClient) GetMessagesByLabelName(ctx context.Context, labelName string) ([]cd.BasicMessage, error) {
+func (m *mockClient) GetMessagesByLabelName(ctx context.Context, labelName string, sinceDaysAgo int) ([]cd.BasicMessage, error) {
 	return m.Messages, m.Err
 }
 
@@ -44,7 +44,7 @@ func TestGmailConnect_GetMessages(t *testing.T) {
 	}
 	conn := New(client)
 
-	result, err := conn.GetMessages(ctx, "INBOX")
+	result, err := conn.GetMessages(ctx, "INBOX", 0)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(result))
 	assert.Equal(t, "abc123", result[0].ID)

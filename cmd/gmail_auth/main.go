@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"go.uber.org/dig"
 )
@@ -72,16 +73,39 @@ func main() {
 		// ラベル指定でGmailメッセージを取得してテスト
 		if len(os.Args) < 3 {
 			fmt.Println("エラー: ラベルパスを指定してください")
-			fmt.Println("使用例: go run main.go gmail-messages-by-label 営業/案件")
+			fmt.Println("使用例: go run main.go gmail-messages-by-label 営業/案件 0")
 			return
 		}
 		label := os.Args[2]
 		fmt.Printf("指定ラベル: %s\n", label)
 
-		var err error
+		strSinceDaysAgo := os.Args[3]
+		fmt.Printf("日付調整: %s\n", strSinceDaysAgo)
+		sinceDaysAgo, err := strconv.Atoi(strSinceDaysAgo)
+		if err != nil {
+			fmt.Printf("引数の日付調整値の数値変換に失敗しました。引数を確認してください。: %v \n", err)
+			return
+		}
+
+		now := time.Now()
+		start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+		if sinceDaysAgo != 0 {
+			start = start.AddDate(0, 0, sinceDaysAgo)
+		}
+		fmt.Printf("%s以降のメールを取得します\n", start.Format("2006-01-02 15:04"))
+
+		if len(os.Args) < 4 {
+			fmt.Println("エラー: 何日前から取得するか指定してください")
+			fmt.Println("使用例: 前日から取得する場合")
+			fmt.Println("go run main.go gmail-messages-by-label 営業/案件 -1")
+			fmt.Println("使用例: 当日分を取得する場合")
+			fmt.Println("go run main.go gmail-messages-by-label 営業/案件 0")
+			return
+		}
+
 		var messages []cd.BasicMessage
 		err = container.Invoke(func(ga *ga.GmailUseCase) {
-			messages, err = ga.GetMessages(ctx, label)
+			messages, err = ga.GetMessages(ctx, label, sinceDaysAgo)
 			if err != nil {
 				fmt.Printf("gメール取得処理失敗: %v \n", err)
 				return
@@ -206,10 +230,13 @@ func printUsage() {
 	fmt.Println("")
 	fmt.Println("使用方法:")
 	fmt.Println("  go run main.go gmail-auth                    # Gmail認証を実行")
-	fmt.Println("  go run main.go gmail-messages-by-label <ラベル> # 指定ラベルのメッセージを取得")
+	fmt.Println("  go run main.go gmail-messages-by-label <ラベル> <日付調整> # 指定ラベルのメッセージを取得")
 	fmt.Println("")
 	fmt.Println("例:")
-	fmt.Println("  go run main.go gmail-messages-by-label 営業/案件")
+	fmt.Println("  使用例: 前日から取得する場合")
+	fmt.Println("    go run main.go gmail-messages-by-label 営業/案件 -1")
+	fmt.Println("  使用例: 当日分を取得する場合")
+	fmt.Println("    go run main.go gmail-messages-by-label 営業/案件 0")
 	fmt.Println("")
 	fmt.Println("必要なファイル:")
 	fmt.Println("  client-secret.json - Google Cloud ConsoleからダウンロードしたOAuth2認証情報")

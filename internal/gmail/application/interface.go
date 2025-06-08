@@ -8,5 +8,5 @@ import (
 
 // GmailUseCaseInterface はGmailのユースケースインターフェースです
 type GmailUseCaseInterface interface {
-	GetMessages(ctx context.Context, labelName string) ([]cd.BasicMessage, error)
+	GetMessages(ctx context.Context, labelName string, sinceDaysAgo int) ([]cd.BasicMessage, error)
 }
