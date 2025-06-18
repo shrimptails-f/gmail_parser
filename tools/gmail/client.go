@@ -141,8 +141,12 @@ func parseDate(raw string) time.Time {
 }
 
 func extractBody(payload *gmail.MessagePart) string {
-	if payload.MimeType == "text/plain" && payload.Body != nil && payload.Body.Data != "" {
+	if (payload.MimeType == "text/plain" || payload.MimeType == "text/html") &&
+		payload.Body != nil &&
+		payload.Body.Data != "" {
+
 		decoded, err := base64.URLEncoding.DecodeString(payload.Body.Data)
+
 		if err == nil {
 			return string(decoded)
 		}
