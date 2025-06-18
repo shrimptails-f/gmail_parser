@@ -121,7 +121,7 @@ func main() {
 		fmt.Printf("取得したメッセージ数: %d\n\n", len(messages))
 
 		var exists bool
-		for _, message := range messages {
+		for i, message := range messages {
 			err = container.Invoke(func(ea *ea.EmailStoreUseCaseImpl) {
 				exists, err = ea.CheckGmailIdExists(message.ID)
 				if err != nil {
@@ -132,12 +132,11 @@ func main() {
 
 			// 既に存在する場合はスキップ
 			if exists {
-				fmt.Printf("メールID %s は既に処理済みです。字句解析をスキップします。\n", message.ID)
+				fmt.Printf("%v通目 メールID %s は既に処理済みです。字句解析をスキップします。\n", i, message.ID)
 				continue
 			} else {
-				fmt.Printf("メールID %s を解析します。 \n", message.ID)
+				fmt.Printf("%v通目 メールID %s を解析します。 \n", i, message.ID)
 			}
-
 			// メール本文の分析を実行
 			var analysisResults []cd.AnalysisResult
 			err = container.Invoke(func(aiapp *aiapp.UseCase) {
