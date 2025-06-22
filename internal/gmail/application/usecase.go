@@ -58,15 +58,9 @@ func (g *GmailUseCase) GetMessages(ctx context.Context, labelName string, sinceD
 	checkExistsWg.Wait()
 	close(existMessagesChan)
 
-	count := 0
 	var existMessages []cd.BasicMessage
 	for msg := range existMessagesChan {
-		count++
-		if count < 5 {
-			existMessages = append(existMessages, msg)
-		} else {
-			break // TODO: 消す
-		}
+		existMessages = append(existMessages, msg)
 	}
 
 	return existMessages, nil
