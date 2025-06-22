@@ -8,6 +8,7 @@ import (
 	ga "business/internal/gmail/application"
 	aiapp "business/internal/openAi/application"
 	"strconv"
+	"sync"
 
 	"business/internal/di"
 	"business/tools/gmail"
@@ -104,63 +105,72 @@ func main() {
 		}
 
 		var messages []cd.BasicMessage
+		var innerErr error
 		err = container.Invoke(func(ga *ga.GmailUseCase) {
-			messages, err = ga.GetMessages(ctx, label, sinceDaysAgo)
-			if err != nil {
-				fmt.Printf("gメール取得処理失敗: %v \n", err)
-				return
-			}
+			messages, innerErr = ga.GetMessages(ctx, label, sinceDaysAgo)
 		})
+		if innerErr != nil {
+			fmt.Printf("gメール取得処理失敗: %v \n", innerErr)
+			return
+		}
 		if err != nil {
 			fmt.Printf("gメール取得処理失敗: %v \n", err)
 			return
 		}
 
-		// 結果を表示
-		fmt.Printf("ラベル指定Gmailメッセージ取得テスト成功!\n")
-		fmt.Printf("取得したメッセージ数: %d\n\n", len(messages))
+		fmt.Printf("メール分析を行います。 \n")
+		var AnalyzeEmailWg sync.WaitGroup
+		analyzeEmailChan := make(chan cd.Email, len(messages)*2)
+		for _, message := range messages {
+			message := message
+			// 今回データが入れ替わるかもためしたいので、クロージャー変数は定義しない。
+			AnalyzeEmailWg.Add(1)
 
-		var exists bool
-		for i, message := range messages {
-			err = container.Invoke(func(ea *ea.EmailStoreUseCaseImpl) {
-				exists, err = ea.CheckGmailIdExists(message.ID)
-				if err != nil {
-					fmt.Printf("メール存在確認エラー: %v", err)
+			// メール本文の分析を実行
+			go func() {
+				defer AnalyzeEmailWg.Done()
+
+				var analysisResults []cd.AnalysisResult
+				err := container.Invoke(func(aiapp *aiapp.UseCase) {
+					analysisResults, innerErr = aiapp.AnalyzeEmailContent(ctx, message.Body)
+				})
+				if innerErr != nil {
+					fmt.Printf("メール分析エラー: %v", innerErr)
 					return
 				}
-			})
-
-			// 既に存在する場合はスキップ
-			if exists {
-				fmt.Printf("%v通目 メールID %s は既に処理済みです。字句解析をスキップします。\n", i, message.ID)
-				continue
-			} else {
-				fmt.Printf("%v通目 メールID %s を解析します。 \n", i, message.ID)
-			}
-			// メール本文の分析を実行
-			var analysisResults []cd.AnalysisResult
-			err = container.Invoke(func(aiapp *aiapp.UseCase) {
-				analysisResults, err = aiapp.AnalyzeEmailContent(ctx, message.Body)
 				if err != nil {
 					fmt.Printf("メール分析エラー: %v", err)
 					return
 				}
-			})
 
-			// 解析結果を保存形式へ詰め替える。
-			results := convertToStructs(message, analysisResults)
-
-			// DB保存
-			for _, result := range results {
-				err = container.Invoke(func(ea *ea.EmailStoreUseCaseImpl) {
-					err = ea.SaveEmailAnalysisResult(result)
-					if err != nil {
-						fmt.Printf("メール保存エラー: %v", err)
-						return
-					}
-				})
-			}
+				// 解析結果を保存形式へ詰め替える。
+				results := convertToStructs(message, analysisResults)
+				for _, email := range results {
+					analyzeEmailChan <- email
+				}
+			}()
 		}
+		fmt.Printf("DBへの保存処理を開始します。aaa")
+		AnalyzeEmailWg.Wait()
+		close(analyzeEmailChan)
+
+		var analysisEmail []cd.Email
+		for email := range analyzeEmailChan {
+			analysisEmail = append(analysisEmail, email)
+		}
+
+		fmt.Printf("DBへの保存処理を開始します。")
+		// DB保存
+		for _, email := range analysisEmail {
+			err = container.Invoke(func(ea *ea.EmailStoreUseCaseImpl) {
+				err = ea.SaveEmailAnalysisResult(email)
+				if err != nil {
+					fmt.Printf("メール保存エラー: %v", err)
+					return
+				}
+			})
+		}
+		fmt.Printf("DBへの保存処理が完了しました。")
 
 	default:
 		printUsage()
