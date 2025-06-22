@@ -26,7 +26,6 @@ func New() (*MySQL, error) {
 			Colorful:      true,
 		},
 	)
-
 	// SQL非表示設定か確認する。
 	if os.Getenv("IS_HIDDEN_SQL") == "true" {
 		newLogger = logger.Default.LogMode(logger.Silent)
@@ -39,16 +38,13 @@ func New() (*MySQL, error) {
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
 		Logger: newLogger,
 	})
-	silentDB := db.Session(&gorm.Session{
-		Logger: db.Config.Logger.LogMode(logger.Silent),
-	})
 
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
 
-	return &MySQL{DB: silentDB}, nil
+	return &MySQL{DB: db}, nil
 }
 
 // NewTest はGORMを使用してMySQLデータベースに接続するための新しいMySQLインスタンスを生成します。
