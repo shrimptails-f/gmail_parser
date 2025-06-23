@@ -8,7 +8,6 @@ import (
 	ga "business/internal/gmail/application"
 	aiapp "business/internal/openAi/application"
 	"strconv"
-	"sync"
 
 	"business/internal/di"
 	"business/tools/gmail"
@@ -77,24 +76,6 @@ func main() {
 			fmt.Println("使用例: go run main.go gmail-messages-by-label 営業/案件 0")
 			return
 		}
-		label := os.Args[2]
-		fmt.Printf("指定ラベル: %s\n", label)
-
-		strSinceDaysAgo := os.Args[3]
-		fmt.Printf("日付調整: %s\n", strSinceDaysAgo)
-		sinceDaysAgo, err := strconv.Atoi(strSinceDaysAgo)
-		if err != nil {
-			fmt.Printf("引数の日付調整値の数値変換に失敗しました。引数を確認してください。: %v \n", err)
-			return
-		}
-
-		now := time.Now()
-		start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-		if sinceDaysAgo != 0 {
-			start = start.AddDate(0, 0, sinceDaysAgo)
-		}
-		fmt.Printf("%s以降のメールを取得します\n", start.Format("2006-01-02 15:04"))
-
 		if len(os.Args) < 4 {
 			fmt.Println("エラー: 何日前から取得するか指定してください")
 			fmt.Println("使用例: 前日から取得する場合")
@@ -103,65 +84,47 @@ func main() {
 			fmt.Println("go run main.go gmail-messages-by-label 営業/案件 0")
 			return
 		}
-
-		var messages []cd.BasicMessage
-		var innerErr error
-		err = container.Invoke(func(ga *ga.GmailUseCase) {
-			messages, innerErr = ga.GetMessages(ctx, label, sinceDaysAgo)
-		})
-		if innerErr != nil {
-			fmt.Printf("gメール取得処理失敗: %v \n", innerErr)
+		strSinceDaysAgo := os.Args[3]
+		sinceDaysAgo, err := strconv.Atoi(strSinceDaysAgo)
+		if err != nil {
+			fmt.Printf("引数の日付調整値の数値変換に失敗しました。引数を確認してください。: %v \n", err)
 			return
 		}
+		now := time.Now()
+		start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+		if sinceDaysAgo != 0 {
+			start = start.AddDate(0, 0, sinceDaysAgo)
+		}
+
+		label := os.Args[2]
+		fmt.Printf("指定ラベル: %s\n", label)
+		fmt.Printf("日付調整: %s\n", strSinceDaysAgo)
+		fmt.Printf("%s以降のメールを取得します\n", start.Format("2006-01-02 15:04"))
+
+		var messages []cd.BasicMessage
+		err = container.Invoke(func(ga *ga.GmailUseCase) {
+			messages, err = ga.GetMessages(ctx, label, sinceDaysAgo)
+			if err != nil {
+				fmt.Printf("gメール取得処理失敗: %v \n", err)
+				return
+			}
+		})
 		if err != nil {
 			fmt.Printf("gメール取得処理失敗: %v \n", err)
 			return
 		}
 
 		fmt.Printf("メール分析を行います。 \n")
-		var AnalyzeEmailWg sync.WaitGroup
-		analyzeEmailChan := make(chan cd.Email, len(messages)*2)
-		for _, message := range messages {
-			message := message
-			// 今回データが入れ替わるかもためしたいので、クロージャー変数は定義しない。
-			AnalyzeEmailWg.Add(1)
-
-			// メール本文の分析を実行
-			go func() {
-				defer AnalyzeEmailWg.Done()
-
-				var analysisResults []cd.AnalysisResult
-				err := container.Invoke(func(aiapp *aiapp.UseCase) {
-					analysisResults, innerErr = aiapp.AnalyzeEmailContent(ctx, message.Body)
-				})
-				if innerErr != nil {
-					fmt.Printf("メール分析エラー: %v", innerErr)
-					return
-				}
-				if err != nil {
-					fmt.Printf("メール分析エラー: %v", err)
-					return
-				}
-
-				// 解析結果を保存形式へ詰め替える。
-				results := convertToStructs(message, analysisResults)
-				for _, email := range results {
-					analyzeEmailChan <- email
-				}
-			}()
-		}
-		fmt.Printf("DBへの保存処理を開始します。aaa")
-		AnalyzeEmailWg.Wait()
-		close(analyzeEmailChan)
-
-		var analysisEmail []cd.Email
-		for email := range analyzeEmailChan {
-			analysisEmail = append(analysisEmail, email)
+		var analysisResults []cd.Email
+		err = container.Invoke(func(aiapp *aiapp.UseCase) {
+			analysisResults, err = aiapp.AnalyzeEmailContent(ctx, messages)
+		})
+		if err != nil {
+			return
 		}
 
 		fmt.Printf("DBへの保存処理を開始します。")
-		// DB保存
-		for _, email := range analysisEmail {
+		for _, email := range analysisResults {
 			err = container.Invoke(func(ea *ea.EmailStoreUseCaseImpl) {
 				err = ea.SaveEmailAnalysisResult(email)
 				if err != nil {
@@ -199,41 +162,6 @@ func getDependencies(ctx context.Context, osw *oswrapper.OsWrapper, credentialsP
 
 	return di.BuildContainer(db, oa, gs, gc, osw), nil
 
-}
-
-// convertToStructs は引数を結合して保存する形式へ詰め替えます。
-func convertToStructs(message cd.BasicMessage, analysisResults []cd.AnalysisResult) []cd.Email {
-	var results []cd.Email
-
-	for _, analysisResult := range analysisResults {
-		result := cd.Email{
-			GmailID:             message.ID,
-			ReceivedDate:        message.Date,
-			Summary:             analysisResult.ProjectTitle,
-			Subject:             message.Subject,
-			From:                message.From,
-			FromEmail:           message.ExtractEmailAddress(),
-			Body:                message.Body,
-			Category:            analysisResult.MailCategory,
-			ProjectName:         analysisResult.ProjectTitle,
-			StartPeriod:         analysisResult.StartPeriod,
-			EndPeriod:           analysisResult.EndPeriod,
-			WorkLocation:        analysisResult.WorkLocation,
-			PriceFrom:           analysisResult.PriceFrom,
-			PriceTo:             analysisResult.PriceTo,
-			Languages:           analysisResult.Languages,
-			Frameworks:          analysisResult.Frameworks,
-			Positions:           analysisResult.Positions,
-			WorkTypes:           analysisResult.WorkTypes,
-			RequiredSkillsMust:  analysisResult.RequiredSkillsMust,
-			RequiredSkillsWant:  analysisResult.RequiredSkillsWant,
-			RemoteWorkCategory:  analysisResult.RemoteWorkCategory,
-			RemoteWorkFrequency: analysisResult.RemoteWorkFrequency,
-		}
-		results = append(results, result)
-	}
-
-	return results
 }
 
 func printUsage() {

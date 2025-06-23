@@ -10,5 +10,5 @@ import (
 
 // EmailAnalysisUseCase はメール分析のユースケースインターフェースです
 type EmailAnalysisUseCase interface {
-	AnalyzeEmailContent(ctx context.Context, message *authdomain.GmailMessage) ([]cd.AnalysisResult, error)
+	AnalyzeEmailContent(ctx context.Context, message *authdomain.GmailMessage) ([]cd.Email, error)
 }
