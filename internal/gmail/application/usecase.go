@@ -49,18 +49,17 @@ func (g *GmailUseCase) GetMessages(ctx context.Context, labelName string, sinceD
 	for _, id := range notExistIds {
 		checkExistsWg.Add(1)
 
-		go func() {
+		go func(messageId string) {
 			defer checkExistsWg.Done()
 
-			var email cd.BasicMessage
-			email, err = g.r.GetGmailDetail(id)
+			email, err := g.r.GetGmailDetail(messageId)
 			if err != nil {
 				fmt.Printf("Gメール詳細取得時にエラーが発生しました。: %v\n", err)
 				return
 			}
 
 			existMessagesChan <- email
-		}()
+		}(id)
 	}
 	checkExistsWg.Wait()
 	close(existMessagesChan)
