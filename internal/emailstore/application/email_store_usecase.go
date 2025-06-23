@@ -33,15 +33,15 @@ func (u *EmailStoreUseCaseImpl) SaveEmailAnalysisResult(result cd.Email) error {
 	return nil
 }
 
-// CheckGmailIdExists はメールIDの存在チェックを行います
-func (u *EmailStoreUseCaseImpl) CheckGmailIdExists(emailId string) (bool, error) {
-	if emailId == "" {
-		return false, fmt.Errorf("メールIDが空です")
+// GetEmailByGmailIds はメールIDリストを返却します
+func (u *EmailStoreUseCaseImpl) GetEmailByGmailIds(emailIdList []string) ([]string, error) {
+	if len(emailIdList) == 0 {
+		return []string{}, fmt.Errorf("メールIDが空です")
 	}
 
-	exists, err := u.r.EmailExists(emailId)
+	exists, err := u.r.GetEmailByGmailIds(emailIdList)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		return false, fmt.Errorf("メール存在チェックエラー: %w", err)
+		return []string{}, fmt.Errorf("メール存在チェックエラー: %w", err)
 	}
 
 	return exists, nil

@@ -8,6 +8,8 @@ import (
 	"context"
 	"fmt"
 	"sync"
+
+	"github.com/samber/lo"
 )
 
 // GmailUseCase はGメール機能群のユースケースです
@@ -25,34 +27,39 @@ func New(r gi.GmailConnectInterface, ea ea.EmailStoreUseCase) *GmailUseCase {
 }
 
 func (g *GmailUseCase) GetMessages(ctx context.Context, labelName string, sinceDaysAgo int) ([]cd.BasicMessage, error) {
-	messages, err := g.r.GetMessages(ctx, labelName, sinceDaysAgo)
-	fmt.Printf("取得したメッセージ数: %d\n\n", len(messages))
-
+	ids, err := g.r.GetMessageIds(ctx, labelName, sinceDaysAgo)
 	if err != nil {
 		return nil, err
 	}
+	fmt.Printf("取得したメッセージ数: %d\n\n", len(ids))
 
+	getIds, err := g.ea.GetEmailByGmailIds(ids)
+	if err != nil {
+		return nil, fmt.Errorf("GetMessages: %v", err)
+	}
+
+	for _, id := range lo.Intersect(ids, getIds) {
+		fmt.Printf("GメールID: %v は登録済みのため解析をスキップしました。 \n", id)
+	}
+
+	// getIdsに存在しないIDを取得 つまりDBに登録する必要のあるメールということ。
+	notExistIds, _ := lo.Difference(ids, getIds)
 	var checkExistsWg sync.WaitGroup
-	existMessagesChan := make(chan cd.BasicMessage, len(messages))
-	for i, message := range messages {
-		// 今回データが入れ替わるかもためしたいので、クロージャー変数は定義しない。
+	existMessagesChan := make(chan cd.BasicMessage, len(notExistIds))
+	for _, id := range notExistIds {
 		checkExistsWg.Add(1)
 
 		go func() {
 			defer checkExistsWg.Done()
 
-			var exists bool
-			exists, err = g.ea.CheckGmailIdExists(message.ID)
+			var email cd.BasicMessage
+			email, err = g.r.GetGmailDetail(id)
 			if err != nil {
-				fmt.Printf("メール存在確認エラー: %v\n", err)
-				return
-			}
-			if exists {
-				fmt.Printf("%v通目 メールID %s は既に処理済みです。字句解析をスキップします。\n", i, message.ID)
+				fmt.Printf("Gメール詳細取得時にエラーが発生しました。: %v\n", err)
 				return
 			}
 
-			existMessagesChan <- message
+			existMessagesChan <- email
 		}()
 	}
 	checkExistsWg.Wait()

@@ -68,27 +68,18 @@ func (r *EmailStoreRepositoryImpl) setEmail(result cd.Email) Email {
 	}
 }
 
-// GetEmailByGmailId はIDでメールを取得します
-func (r *EmailStoreRepositoryImpl) GetEmailByGmailId(gmail_id string) (Email, error) {
-	var email Email
-	err := r.db.Where("gmail_id = ?", gmail_id).First(&email).Error
+// GetEmailByGmailIds はIDでメールを取得します
+func (r *EmailStoreRepositoryImpl) GetEmailByGmailIds(ids []string) ([]string, error) {
+	var resuts []string
+	err := r.db.Select("gmail_id").
+		Model(Email{}).
+		Where("gmail_id IN ?", ids).
+		Find(&resuts).
+		Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return Email{}, ErrEmailNotFound
-		}
-		return Email{}, fmt.Errorf("メール取得エラー: %w", err)
+		return []string{}, fmt.Errorf("メール存在チェックエラー: %w", err)
 	}
-	return email, nil
-}
-
-// EmailExists はメールが既に存在するかチェックします
-func (r *EmailStoreRepositoryImpl) EmailExists(id string) (bool, error) {
-	var count int64
-	err := r.db.Model(Email{}).Where("gmail_id = ?", id).Count(&count).Error
-	if err != nil {
-		return false, fmt.Errorf("メール存在チェックエラー: %w", err)
-	}
-	return count > 0, nil
+	return resuts, nil
 }
 
 // saveProjectDetails は案件メールの詳細情報を保存します

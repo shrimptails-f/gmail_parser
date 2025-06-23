@@ -102,13 +102,14 @@ func main() {
 		fmt.Printf("%s以降のメールを取得します\n", start.Format("2006-01-02 15:04"))
 
 		var messages []cd.BasicMessage
+		var innerErr error
 		err = container.Invoke(func(ga *ga.GmailUseCase) {
-			messages, err = ga.GetMessages(ctx, label, sinceDaysAgo)
-			if err != nil {
-				fmt.Printf("gメール取得処理失敗: %v \n", err)
-				return
-			}
+			messages, innerErr = ga.GetMessages(ctx, label, sinceDaysAgo)
 		})
+		if innerErr != nil {
+			fmt.Printf("gメール取得処理失敗: %v \n", innerErr)
+			return
+		}
 		if err != nil {
 			fmt.Printf("gメール取得処理失敗: %v \n", err)
 			return
@@ -116,10 +117,16 @@ func main() {
 
 		fmt.Printf("メール分析を行います。 \n")
 		var analysisResults []cd.Email
+		var AnalyzeinnerErr error
 		err = container.Invoke(func(aiapp *aiapp.UseCase) {
-			analysisResults, err = aiapp.AnalyzeEmailContent(ctx, messages)
+			analysisResults, AnalyzeinnerErr = aiapp.AnalyzeEmailContent(ctx, messages)
 		})
+		if AnalyzeinnerErr != nil {
+			fmt.Printf("メール分析エラー: %v \n", AnalyzeinnerErr)
+			return
+		}
 		if err != nil {
+			fmt.Printf("メール分析エラー: %v \n", err)
 			return
 		}
 

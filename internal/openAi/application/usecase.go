@@ -45,7 +45,7 @@ func (u *UseCase) AnalyzeEmailContent(ctx context.Context, emails []cd.BasicMess
 			analysisResults, err := u.r.AnalyzeEmailBody(ctx, string(prompt)+"\n\n"+email.Body)
 
 			if err != nil {
-				fmt.Printf("メール分析エラー: GメールID: %s %v \n", email.ID, err)
+				fmt.Printf("解析時にエラーが発生しました。 GメールID: %s %v \n", email.ID, err)
 				return
 			}
 			if len(analysisResults) == 0 {
