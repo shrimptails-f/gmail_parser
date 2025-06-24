@@ -11,6 +11,6 @@ type EmailStoreUseCase interface {
 	// SaveEmailAnalysisResult はメール分析結果を保存します
 	SaveEmailAnalysisResult(result cd.Email) error
 
-	// CheckGmailExists はGメールIDの存在チェックを行います
-	CheckGmailIdExists(gmailId string) (bool, error)
+	// GetEmailByGmailIds はGメールIDリストを返却します。
+	GetEmailByGmailIds(gmailId []string) ([]string, error)
 }

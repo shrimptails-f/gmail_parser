@@ -18,6 +18,10 @@ func New(gc gc.ClientInterface) *GmailConnect {
 	}
 }
 
-func (g *GmailConnect) GetMessages(ctx context.Context, labelName string, sinceDaysAgo int) ([]cd.BasicMessage, error) {
+func (g *GmailConnect) GetMessageIds(ctx context.Context, labelName string, sinceDaysAgo int) ([]string, error) {
 	return g.gc.GetMessagesByLabelName(ctx, labelName, sinceDaysAgo)
+}
+
+func (g *GmailConnect) GetGmailDetail(id string) (cd.BasicMessage, error) {
+	return g.gc.GetGmailDetail(id)
 }

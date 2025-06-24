@@ -2,7 +2,6 @@ package application
 
 import (
 	cd "business/internal/common/domain"
-	r "business/internal/emailstore/infrastructure"
 	"errors"
 	"testing"
 
@@ -20,14 +19,9 @@ func (m *MockEmailStoreRepository) SaveEmail(result cd.Email) error {
 	return args.Error(0)
 }
 
-func (m *MockEmailStoreRepository) GetEmailByGmailId(gmailId string) (r.Email, error) {
-	args := m.Called(gmailId)
-	return args.Get(0).(r.Email), args.Error(1)
-}
-
-func (m *MockEmailStoreRepository) EmailExists(id string) (bool, error) {
-	args := m.Called(id)
-	return args.Bool(0), args.Error(1)
+func (m *MockEmailStoreRepository) GetEmailByGmailIds(gmailIds []string) ([]string, error) {
+	args := m.Called(gmailIds)
+	return args.Get(0).([]string), args.Error(1)
 }
 
 // テスト: SaveEmailAnalysisResult 成功時
@@ -57,53 +51,43 @@ func TestSaveEmailAnalysisResult_Error(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
-// テスト: CheckGmailIdExists 成功 (存在)
-func TestCheckGmailIdExists_Exists(t *testing.T) {
+// テスト: GetEmailByGmailIds 成功時
+func TestGetEmailByGmailIds_Success(t *testing.T) {
 	mockRepo := new(MockEmailStoreRepository)
 	usecase := NewEmailStoreUseCase(mockRepo)
 
-	mockRepo.On("EmailExists", "gmail-id-123").Return(true, nil)
+	emailIds := []string{"gmail-id-1", "gmail-id-2"}
+	expectedResult := []string{"gmail-id-1"}
+	mockRepo.On("GetEmailByGmailIds", emailIds).Return(expectedResult, nil)
 
-	exists, err := usecase.CheckGmailIdExists("gmail-id-123")
+	result, err := usecase.GetEmailByGmailIds(emailIds)
 	assert.NoError(t, err)
-	assert.True(t, exists)
+	assert.Equal(t, expectedResult, result)
 	mockRepo.AssertExpectations(t)
 }
 
-// テスト: CheckGmailIdExists 成功 (存在しない)
-func TestCheckGmailIdExists_NotExists(t *testing.T) {
+// テスト: GetEmailByGmailIds エラー時
+func TestGetEmailByGmailIds_Error(t *testing.T) {
 	mockRepo := new(MockEmailStoreRepository)
 	usecase := NewEmailStoreUseCase(mockRepo)
 
-	mockRepo.On("EmailExists", "non-existent-id").Return(false, nil)
+	emailIds := []string{"gmail-id-1"}
+	mockRepo.On("GetEmailByGmailIds", emailIds).Return([]string{}, errors.New("db error"))
 
-	exists, err := usecase.CheckGmailIdExists("non-existent-id")
-	assert.NoError(t, err)
-	assert.False(t, exists)
-	mockRepo.AssertExpectations(t)
-}
-
-// テスト: CheckGmailIdExists エラー発生
-func TestCheckGmailIdExists_Error(t *testing.T) {
-	mockRepo := new(MockEmailStoreRepository)
-	usecase := NewEmailStoreUseCase(mockRepo)
-
-	mockRepo.On("EmailExists", "error-id").Return(false, errors.New("db error"))
-
-	exists, err := usecase.CheckGmailIdExists("error-id")
+	result, err := usecase.GetEmailByGmailIds(emailIds)
 	assert.Error(t, err)
-	assert.False(t, exists)
+	assert.Empty(t, result)
 	assert.Contains(t, err.Error(), "メール存在チェックエラー")
 	mockRepo.AssertExpectations(t)
 }
 
-// テスト: CheckGmailIdExists 空文字
-func TestCheckGmailIdExists_Empty(t *testing.T) {
+// テスト: GetEmailByGmailIds 空のリスト
+func TestGetEmailByGmailIds_EmptyList(t *testing.T) {
 	mockRepo := new(MockEmailStoreRepository)
 	usecase := NewEmailStoreUseCase(mockRepo)
 
-	exists, err := usecase.CheckGmailIdExists("")
+	result, err := usecase.GetEmailByGmailIds([]string{})
 	assert.Error(t, err)
-	assert.False(t, exists)
+	assert.Empty(t, result)
 	assert.Contains(t, err.Error(), "メールIDが空です")
 }

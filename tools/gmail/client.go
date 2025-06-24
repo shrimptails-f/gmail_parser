@@ -36,13 +36,13 @@ func (c *Client) ListMessageIDs(ctx context.Context, max int64) ([]string, error
 	}
 	return ids, nil
 }
-func (c *Client) GetMessagesByLabelName(ctx context.Context, labelName string, sinceDaysAgo int) ([]cd.BasicMessage, error) {
+func (c *Client) GetMessagesByLabelName(ctx context.Context, labelName string, sinceDaysAgo int) ([]string, error) {
 	user := "me"
 
 	// ラベルID取得
 	labelResp, err := c.svc.Users.Labels.List(user).Do()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ラベル取得に失敗しました。: %v", err)
 	}
 	var labelID string
 	for _, label := range labelResp.Labels {
@@ -64,7 +64,7 @@ func (c *Client) GetMessagesByLabelName(ctx context.Context, labelName string, s
 	query := fmt.Sprintf("after:%d", start.Unix())
 
 	// ページングしながら取得
-	var messages []cd.BasicMessage
+	var messageIds []string
 	pageToken := ""
 
 	for {
@@ -81,39 +81,35 @@ func (c *Client) GetMessagesByLabelName(ctx context.Context, labelName string, s
 			return nil, err
 		}
 
-		seenThreads := make(map[string]struct{})
-
 		for _, m := range resp.Messages {
-			// スレッドIDで重複判定
-			if _, exists := seenThreads[m.ThreadId]; exists {
-				continue // 同一スレッドはスキップ
-			}
-			seenThreads[m.ThreadId] = struct{}{}
-
-			full, err := c.svc.Users.Messages.Get(user, m.Id).Format("full").Do()
-			if err != nil {
-				continue // 取得失敗はスキップ
-			}
-
-			msg := cd.BasicMessage{
-				ID:      full.Id,
-				Subject: getHeader(full.Payload.Headers, "Subject"),
-				From:    getHeader(full.Payload.Headers, "From"),
-				To:      parseHeaderMulti(getHeader(full.Payload.Headers, "To")),
-				Date:    parseDate(getHeader(full.Payload.Headers, "Date")),
-				Body:    stripHTMLTags(extractBody(full.Payload)), // HTMLタグを削除する。
-			}
-
-			messages = append(messages, msg)
+			messageIds = append(messageIds, m.Id)
 		}
-
 		if resp.NextPageToken == "" {
 			break
 		}
 		pageToken = resp.NextPageToken
+
 	}
 
-	return messages, nil
+	return messageIds, nil
+}
+
+func (c *Client) GetGmailDetail(id string) (cd.BasicMessage, error) {
+	user := "me"
+	full, err := c.svc.Users.Messages.Get(user, id).Format("full").Do()
+	if err != nil {
+		return cd.BasicMessage{}, fmt.Errorf("gメール取得処理でエラーが発生しました。 %v", err)
+	}
+
+	msg := cd.BasicMessage{
+		ID:      full.Id,
+		Subject: getHeader(full.Payload.Headers, "Subject"),
+		From:    getHeader(full.Payload.Headers, "From"),
+		To:      parseHeaderMulti(getHeader(full.Payload.Headers, "To")),
+		Date:    parseDate(getHeader(full.Payload.Headers, "Date")),
+		Body:    stripHTMLTags(extractBody(full.Payload)), // HTMLタグを削除する。
+	}
+	return msg, nil
 }
 
 func getHeader(headers []*gmail.MessagePartHeader, name string) string {

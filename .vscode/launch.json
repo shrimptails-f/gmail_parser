@@ -8,7 +8,7 @@
       "program": "/data/cmd/gmail_auth/",
       "env": {},
       "args": ["gmail-messages-by-label","営業/案件","0"],
-      "showLog": true
+      "showLog": false
     }
   ]
 }
