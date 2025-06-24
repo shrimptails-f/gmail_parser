@@ -135,7 +135,7 @@ func main() {
 			err = container.Invoke(func(ea *ea.EmailStoreUseCaseImpl) {
 				err = ea.SaveEmailAnalysisResult(email)
 				if err != nil {
-					fmt.Printf("メール保存エラー: %v", err)
+					fmt.Printf("メール保存エラー: %v \n", err)
 					return
 				}
 			})
