@@ -140,7 +140,7 @@ func main() {
 				}
 			})
 		}
-		fmt.Printf("DBへの保存処理が完了しました。")
+		fmt.Printf("DBへの保存処理が完了しました。 \n")
 
 	default:
 		printUsage()
