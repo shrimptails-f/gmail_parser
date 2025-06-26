@@ -6,7 +6,10 @@ import (
 	ga "business/internal/gmail/application"
 	aiapp "business/internal/openAi/application"
 	"context"
+	"errors"
 	"fmt"
+
+	"github.com/gin-gonic/gin"
 )
 
 // AnalyzeEmailController はメール保存のユースケース実装です
@@ -29,8 +32,18 @@ func New(
 	}
 }
 
-func (n *AnalyzeEmailController) SaveEmailAnalysisResult(ctx context.Context) error {
-	messages, err := n.ga.GetMessages(ctx, "営業/案件", -1)
+type request struct {
+	Label        string `json:"label" binding:"required"`
+	SinceDaysAgo int    `json:"since_days_ago"`
+}
+
+func (n *AnalyzeEmailController) SaveEmailAnalysisResult(c *gin.Context, ctx context.Context) error {
+	req := request{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		return errors.New("BadRequest")
+	}
+
+	messages, err := n.ga.GetMessages(ctx, req.Label, req.SinceDaysAgo)
 	if err != nil {
 		fmt.Printf("gメール取得処理失敗: %v \n", err)
 		return err

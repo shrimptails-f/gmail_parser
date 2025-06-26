@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/dig"
@@ -22,18 +23,25 @@ func NewRouter(g *gin.Engine, container *dig.Container) *gin.Engine {
 	})
 
 	g.GET("/openAi-email-analysis", func(c *gin.Context) {
+		var innerErr error
 		err := container.Invoke(func(p *presentation.AnalyzeEmailController) {
-			err := p.SaveEmailAnalysisResult(ctx)
-			if err != nil {
-				fmt.Printf("Eメール解析エラー: %v", err)
+			innerErr = p.SaveEmailAnalysisResult(c, ctx)
+		})
+		if innerErr != nil {
+			if strings.Contains(innerErr.Error(), "BadRequest") {
+				c.Status(http.StatusBadRequest)
 				return
 			}
-		})
-		if err != nil {
-			fmt.Printf("Eメール解析エラー: %v", err)
+			fmt.Printf("Eメール解析エラー: %v", innerErr)
+			c.Status(http.StatusInternalServerError)
 			return
 		}
-		c.Status(http.StatusNoContent)
+
+		if err != nil {
+			fmt.Printf("Eメール解析エラー: %v", err)
+			c.Status(http.StatusInternalServerError)
+		}
+		c.Status(http.StatusOK)
 	})
 
 	return g

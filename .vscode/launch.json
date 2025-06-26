@@ -8,7 +8,7 @@
       "mode": "auto",
       "program": "${workspaceFolder}/cmd/app", 
       "debugAdapter": "dlv-dap",
-      "trace": "verbose",
+      "trace": "warn",
       "showLog": false,
       "env": {
         "GIN_MODE": "debug"
