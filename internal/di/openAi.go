@@ -13,10 +13,10 @@ import (
 func ProvideOpenAiDependencies(container *dig.Container) {
 	// infra
 	_ = container.Provide(func(oa *openai.Client) *aiinfra.Analyzer {
-		return aiinfra.NewAnalyzer(oa)
+		return aiinfra.New(oa)
 	})
 	// app
 	_ = container.Provide(func(r *aiinfra.Analyzer, osw *oswrapper.OsWrapper) *aiapp.UseCase {
-		return aiapp.NewUseCase(r, osw)
+		return aiapp.New(r, osw)
 	})
 }

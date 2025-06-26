@@ -4,11 +4,10 @@ package application
 
 import (
 	cd "business/internal/common/domain"
-	authdomain "business/internal/gmail/domain"
 	"context"
 )
 
-// EmailAnalysisUseCase はメール分析のユースケースインターフェースです
-type EmailAnalysisUseCase interface {
-	AnalyzeEmailContent(ctx context.Context, message *authdomain.GmailMessage) ([]cd.Email, error)
+// UseCaseInterface はメール分析のユースケースインターフェースです
+type UseCaseInterface interface {
+	AnalyzeEmailContent(ctx context.Context, emails []cd.BasicMessage) ([]cd.Email, error)
 }

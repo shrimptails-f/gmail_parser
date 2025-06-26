@@ -1,14 +1,13 @@
 package gmail
 
 import (
+	cd "business/internal/common/domain"
 	"context"
 	"encoding/base64"
 	"fmt"
 	"net/mail"
 	"strings"
 	"time"
-
-	cd "business/internal/common/domain"
 
 	"google.golang.org/api/gmail/v1"
 )
@@ -17,7 +16,11 @@ type Client struct {
 	svc *gmail.Service
 }
 
-func NewClient(svc *gmail.Service) *Client {
+func New() *Client {
+	return &Client{}
+}
+
+func (c *Client) SetClient(svc *gmail.Service) *Client {
 	return &Client{
 		svc: svc,
 	}

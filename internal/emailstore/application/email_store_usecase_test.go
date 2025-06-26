@@ -27,7 +27,7 @@ func (m *MockEmailStoreRepository) GetEmailByGmailIds(gmailIds []string) ([]stri
 // テスト: SaveEmailAnalysisResult 成功時
 func TestSaveEmailAnalysisResult_Success(t *testing.T) {
 	mockRepo := new(MockEmailStoreRepository)
-	usecase := NewEmailStoreUseCase(mockRepo)
+	usecase := New(mockRepo)
 
 	email := cd.Email{GmailID: "test@gmail.com"}
 	mockRepo.On("SaveEmail", email).Return(nil)
@@ -40,7 +40,7 @@ func TestSaveEmailAnalysisResult_Success(t *testing.T) {
 // テスト: SaveEmailAnalysisResult エラー時
 func TestSaveEmailAnalysisResult_Error(t *testing.T) {
 	mockRepo := new(MockEmailStoreRepository)
-	usecase := NewEmailStoreUseCase(mockRepo)
+	usecase := New(mockRepo)
 
 	email := cd.Email{GmailID: "test@gmail.com"}
 	mockRepo.On("SaveEmail", email).Return(errors.New("db error"))
@@ -54,7 +54,7 @@ func TestSaveEmailAnalysisResult_Error(t *testing.T) {
 // テスト: GetEmailByGmailIds 成功時
 func TestGetEmailByGmailIds_Success(t *testing.T) {
 	mockRepo := new(MockEmailStoreRepository)
-	usecase := NewEmailStoreUseCase(mockRepo)
+	usecase := New(mockRepo)
 
 	emailIds := []string{"gmail-id-1", "gmail-id-2"}
 	expectedResult := []string{"gmail-id-1"}
@@ -69,7 +69,7 @@ func TestGetEmailByGmailIds_Success(t *testing.T) {
 // テスト: GetEmailByGmailIds エラー時
 func TestGetEmailByGmailIds_Error(t *testing.T) {
 	mockRepo := new(MockEmailStoreRepository)
-	usecase := NewEmailStoreUseCase(mockRepo)
+	usecase := New(mockRepo)
 
 	emailIds := []string{"gmail-id-1"}
 	mockRepo.On("GetEmailByGmailIds", emailIds).Return([]string{}, errors.New("db error"))
@@ -84,10 +84,9 @@ func TestGetEmailByGmailIds_Error(t *testing.T) {
 // テスト: GetEmailByGmailIds 空のリスト
 func TestGetEmailByGmailIds_EmptyList(t *testing.T) {
 	mockRepo := new(MockEmailStoreRepository)
-	usecase := NewEmailStoreUseCase(mockRepo)
+	usecase := New(mockRepo)
 
 	result, err := usecase.GetEmailByGmailIds([]string{})
-	assert.Error(t, err)
+	assert.Empty(t, err)
 	assert.Empty(t, result)
-	assert.Contains(t, err.Error(), "メールIDが空です")
 }

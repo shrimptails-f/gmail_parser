@@ -38,7 +38,7 @@ func TestEmailStoreRepositoryImpl_SaveEmail(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	repo := NewEmailStoreRepository(db.DB)
+	repo := New(db.DB)
 
 	tests := []struct {
 		name          string
@@ -203,7 +203,7 @@ func TestEmailStoreRepositoryImpl_SavedDuplicateEmail(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	repo := NewEmailStoreRepository(db.DB)
+	repo := New(db.DB)
 
 	tests := []struct {
 		name          string

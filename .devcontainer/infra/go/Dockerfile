@@ -1,4 +1,4 @@
-FROM golang:1.24.0-bookworm
+FROM golang:1.24.2-bookworm
 
 # Task Runner のインストール
 RUN curl -sL "https://github.com/go-task/task/releases/download/v3.9.0/task_linux_amd64.deb" -o task.deb && dpkg -i task.deb && rm task.deb
@@ -29,6 +29,7 @@ RUN apt-get update && \
 RUN apt-get update && apt-get install -y keychain
 RUN eval `keychain --eval --agents ssh id_rsa`
 
+RUN go install github.com/air-verse/air@latest
 RUN go install github.com/go-delve/delve/cmd/dlv@latest
 RUN go install honnef.co/go/tools/cmd/staticcheck@latest
 RUN go install golang.org/x/tools/gopls@latest

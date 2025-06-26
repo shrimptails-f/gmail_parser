@@ -99,7 +99,7 @@ func TestAnalyzeEmailContent_Success(t *testing.T) {
 	}
 	mockAnalyzer := new(mockAnalyzer)
 	mockAnalyzer.On("AnalyzeEmailBody", ctx, "PROMPT\n\nテスト本文").Return(analyzeEmailBodyexpected, nil)
-	usecase := NewUseCase(mockAnalyzer, mockOS)
+	usecase := New(mockAnalyzer, mockOS)
 
 	input := []cd.BasicMessage{
 		{
@@ -132,7 +132,7 @@ func TestAnalyzeEmailContent_ReadFileError(t *testing.T) {
 
 	mockAnalyzer := new(mockAnalyzer)
 
-	usecase := NewUseCase(mockAnalyzer, mockOS)
+	usecase := New(mockAnalyzer, mockOS)
 
 	input := []cd.BasicMessage{}
 	results, err := usecase.AnalyzeEmailContent(ctx, input)

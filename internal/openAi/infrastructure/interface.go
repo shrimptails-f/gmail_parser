@@ -7,7 +7,7 @@ import (
 	"context"
 )
 
-// AnalyzerInterFace はOpenAI APIを実行します。
-type AnalyzerInterFace interface {
+// ConnectInterface はOpenAI APIのインターフェースです。
+type ConnectInterface interface {
 	AnalyzeEmailBody(ctx context.Context, prompt string) ([]cd.AnalysisResult, error)
 }

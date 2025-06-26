@@ -20,12 +20,10 @@ func ProvideCommonDependencies(container *dig.Container, conn *mysql.MySQL, oa *
 		return oa
 	})
 
-	// gmail.Clientの生成に必要
 	_ = container.Provide(func() *gmailService.Client {
 		return gs
 	})
 
-	// GメールのAPI接続クライアント
 	_ = container.Provide(func() *gmail.Client {
 		return gc
 	})
@@ -51,6 +49,7 @@ func BuildContainer(conn *mysql.MySQL, oa *openai.Client, gs *gmailService.Clien
 	ProvideOpenAiDependencies(container)
 	ProvideGmailDependencies(container)
 	ProvideEmailStoreDependencies(container)
+	ProvidePresentationDependencies(container)
 
 	return container
 }
