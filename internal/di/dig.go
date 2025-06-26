@@ -51,6 +51,7 @@ func BuildContainer(conn *mysql.MySQL, oa *openai.Client, gs *gmailService.Clien
 	ProvideOpenAiDependencies(container)
 	ProvideGmailDependencies(container)
 	ProvideEmailStoreDependencies(container)
+	ProvidePresentationDependencies(container)
 
 	return container
 }

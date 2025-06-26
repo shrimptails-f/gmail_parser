@@ -4,12 +4,10 @@ package main
 
 import (
 	cd "business/internal/common/domain"
+	"business/internal/di"
 	ea "business/internal/emailstore/application"
 	ga "business/internal/gmail/application"
 	aiapp "business/internal/openAi/application"
-	"strconv"
-
-	"business/internal/di"
 	"business/tools/gmail"
 	"business/tools/gmailService"
 	"business/tools/mysql"
@@ -18,6 +16,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"go.uber.org/dig"

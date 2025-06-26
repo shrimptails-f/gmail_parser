@@ -29,6 +29,7 @@ RUN apt-get update && \
 RUN apt-get update && apt-get install -y keychain
 RUN eval `keychain --eval --agents ssh id_rsa`
 
+RUN go install github.com/air-verse/air@latest
 RUN go install github.com/go-delve/delve/cmd/dlv@latest
 RUN go install honnef.co/go/tools/cmd/staticcheck@latest
 RUN go install golang.org/x/tools/gopls@latest

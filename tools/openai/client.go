@@ -8,7 +8,6 @@ import (
 
 	"github.com/openai/openai-go"
 	"github.com/openai/openai-go/option"
-	// "github.com/invopop/jsonschema"
 )
 
 type Client struct {
