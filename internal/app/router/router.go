@@ -14,12 +14,13 @@ import (
 func NewRouter(g *gin.Engine, container *dig.Container) *gin.Engine {
 	ctx := context.Background()
 	g.GET("/", func(c *gin.Context) {
+		c.Status(http.StatusOK)
 		// c.Status(http.StatusNoContent)
 
 		// c.Status(http.StatusBadRequest)
-		c.JSON(http.StatusOK, gin.H{
-			"message": "hello world",
-		})
+		// c.JSON(http.StatusOK, gin.H{
+		// 	"message": "hello world",
+		// })
 	})
 
 	g.GET("/openAi-email-analysis", func(c *gin.Context) {
