@@ -6,8 +6,8 @@ import (
 	cd "business/internal/common/domain"
 )
 
-// EmailStoreUseCase はメール保存のユースケースインターフェースです
-type EmailStoreUseCase interface {
+// UseCaseInterface はメール保存のユースケースインターフェースです
+type UseCaseInterface interface {
 	// SaveEmailAnalysisResult はメール分析結果を保存します
 	SaveEmailAnalysisResult(result cd.Email) error
 

@@ -11,20 +11,20 @@ import (
 	"gorm.io/gorm"
 )
 
-// EmailStoreUseCaseImpl はメール保存のユースケース実装です
-type EmailStoreUseCaseImpl struct {
-	r r.EmailStoreRepository
+// UseCase はメール保存のユースケースの具象です
+type UseCase struct {
+	r r.RepositoryInterface
 }
 
-// NewEmailStoreUseCase はメール保存ユースケースを作成します
-func NewEmailStoreUseCase(r r.EmailStoreRepository) *EmailStoreUseCaseImpl {
-	return &EmailStoreUseCaseImpl{
+// New はメール保存ユースケースを作成します
+func New(r r.RepositoryInterface) *UseCase {
+	return &UseCase{
 		r: r,
 	}
 }
 
 // SaveEmailAnalysisResult はメール分析結果を保存します
-func (u *EmailStoreUseCaseImpl) SaveEmailAnalysisResult(result cd.Email) error {
+func (u *UseCase) SaveEmailAnalysisResult(result cd.Email) error {
 	// リポジトリを使用してメールを保存
 	if err := u.r.SaveEmail(result); err != nil {
 		return fmt.Errorf("メール保存エラー: %w", err)
@@ -34,7 +34,7 @@ func (u *EmailStoreUseCaseImpl) SaveEmailAnalysisResult(result cd.Email) error {
 }
 
 // GetEmailByGmailIds はメールIDリストを返却します
-func (u *EmailStoreUseCaseImpl) GetEmailByGmailIds(emailIdList []string) ([]string, error) {
+func (u *UseCase) GetEmailByGmailIds(emailIdList []string) ([]string, error) {
 	if len(emailIdList) == 0 {
 		return []string{}, nil
 	}

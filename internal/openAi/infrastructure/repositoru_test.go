@@ -18,7 +18,7 @@ func (m *mockOpenAIClient) Chat(ctx context.Context, input string) ([]cd.Analysi
 
 func TestAnalyzer_AnalyzeEmailBody(t *testing.T) {
 	mockClient := &mockOpenAIClient{}
-	analyzer := infrastructure.NewAnalyzer(mockClient)
+	analyzer := infrastructure.New(mockClient)
 
 	ctx := context.Background()
 	result, err := analyzer.AnalyzeEmailBody(ctx, "test email content")

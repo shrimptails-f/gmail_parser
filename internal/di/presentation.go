@@ -13,7 +13,7 @@ import (
 func ProvidePresentationDependencies(container *dig.Container) {
 	// AnalyzeEmailControllerの依存注入
 	_ = container.Provide(func(
-		ea *ea.EmailStoreUseCaseImpl,
+		ea *ea.UseCase,
 		ga *ga.GmailUseCase,
 		aiapp *aiapp.UseCase,
 	) *presentation.AnalyzeEmailController {

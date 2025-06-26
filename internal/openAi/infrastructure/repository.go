@@ -10,11 +10,11 @@ import (
 
 // UseCase はメール分析のユースケース実装です
 type Analyzer struct {
-	oa oa.ClientInterFace
+	oa oa.UseCaserInterface
 }
 
-// NewEmailAnalysisUseCase はメール分析ユースケースを作成します
-func NewAnalyzer(oa oa.ClientInterFace) *Analyzer {
+// New はメール分析ユースケースを作成します
+func New(oa oa.UseCaserInterface) *Analyzer {
 	return &Analyzer{
 		oa: oa,
 	}

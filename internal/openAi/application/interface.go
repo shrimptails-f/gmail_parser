@@ -7,7 +7,7 @@ import (
 	"context"
 )
 
-// EmailAnalysisUseCase はメール分析のユースケースインターフェースです
-type EmailAnalysisUseCase interface {
+// UseCaseInterface はメール分析のユースケースインターフェースです
+type UseCaseInterface interface {
 	AnalyzeEmailContent(ctx context.Context, emails []cd.BasicMessage) ([]cd.Email, error)
 }

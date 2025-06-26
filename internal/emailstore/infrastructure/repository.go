@@ -12,19 +12,19 @@ import (
 	"gorm.io/gorm"
 )
 
-// EmailStoreRepositoryImpl はメール保存のリポジトリ実装です
-type EmailStoreRepositoryImpl struct {
+// Repository はメール保存のリポジトリ実装です
+type Repository struct {
 	db *gorm.DB
 }
 
-// NewEmailStoreRepository はメール保存リポジトリを作成します
-func NewEmailStoreRepository(db *gorm.DB) *EmailStoreRepositoryImpl {
-	return &EmailStoreRepositoryImpl{
+// New はメール保存リポジトリを作成します
+func New(db *gorm.DB) *Repository {
+	return &Repository{
 		db: db,
 	}
 }
 
-func (r *EmailStoreRepositoryImpl) SaveEmail(result cd.Email) error {
+func (r *Repository) SaveEmail(result cd.Email) error {
 	// トランザクション開始
 	tx, creanUp := mysql.Transactional(r.db)
 	defer creanUp()
@@ -56,7 +56,7 @@ func (r *EmailStoreRepositoryImpl) SaveEmail(result cd.Email) error {
 	return nil
 }
 
-func (r *EmailStoreRepositoryImpl) setEmail(result cd.Email) Email {
+func (r *Repository) setEmail(result cd.Email) Email {
 	return Email{
 		GmailID:      result.GmailID,
 		Subject:      result.Subject,
@@ -69,7 +69,7 @@ func (r *EmailStoreRepositoryImpl) setEmail(result cd.Email) Email {
 }
 
 // GetEmailByGmailIds はIDでメールを取得します
-func (r *EmailStoreRepositoryImpl) GetEmailByGmailIds(ids []string) ([]string, error) {
+func (r *Repository) GetEmailByGmailIds(ids []string) ([]string, error) {
 	var resuts []string
 	err := r.db.Select("gmail_id").
 		Model(Email{}).
@@ -83,7 +83,7 @@ func (r *EmailStoreRepositoryImpl) GetEmailByGmailIds(ids []string) ([]string, e
 }
 
 // saveProjectDetails は案件メールの詳細情報を保存します
-func (r *EmailStoreRepositoryImpl) saveProjectDetails(tx *gorm.DB, result cd.Email, email Email) error {
+func (r *Repository) saveProjectDetails(tx *gorm.DB, result cd.Email, email Email) error {
 	// EmailProjectを保存
 	entryTimings := strings.Join(result.StartPeriod, ",")
 	languages := strings.Join(result.Languages, ",")
@@ -139,7 +139,7 @@ func (r *EmailStoreRepositoryImpl) saveProjectDetails(tx *gorm.DB, result cd.Ema
 }
 
 // saveEntryTimings は入場時期を保存します
-func (r *EmailStoreRepositoryImpl) saveEntryTimings(tx *gorm.DB, emailId uint, startPeriods []string) error {
+func (r *Repository) saveEntryTimings(tx *gorm.DB, emailId uint, startPeriods []string) error {
 	for _, period := range startPeriods {
 		entryTiming := EntryTiming{
 			EmailID:   emailId,
@@ -153,7 +153,7 @@ func (r *EmailStoreRepositoryImpl) saveEntryTimings(tx *gorm.DB, emailId uint, s
 }
 
 // saveKeywords はキーワード関連のデータを保存します
-func (r *EmailStoreRepositoryImpl) saveKeywords(tx *gorm.DB, result cd.Email, emailId uint) error {
+func (r *Repository) saveKeywords(tx *gorm.DB, result cd.Email, emailId uint) error {
 	// 言語
 	if err := r.saveKeywordsByType(tx, emailId, result.Languages, "language"); err != nil {
 		return err
@@ -178,7 +178,7 @@ func (r *EmailStoreRepositoryImpl) saveKeywords(tx *gorm.DB, result cd.Email, em
 }
 
 // saveKeywordsByType は指定されたタイプのキーワードを保存します
-func (r *EmailStoreRepositoryImpl) saveKeywordsByType(tx *gorm.DB, emailID uint, keywords []string, keywordType string) error {
+func (r *Repository) saveKeywordsByType(tx *gorm.DB, emailID uint, keywords []string, keywordType string) error {
 	for _, keyword := range keywords {
 		if keyword == "" {
 			continue
@@ -203,7 +203,7 @@ func (r *EmailStoreRepositoryImpl) saveKeywordsByType(tx *gorm.DB, emailID uint,
 	return nil
 }
 
-func (r *EmailStoreRepositoryImpl) getOrCreateKeywordGroup(tx *gorm.DB, name string, keywordType string) (KeywordGroup, error) {
+func (r *Repository) getOrCreateKeywordGroup(tx *gorm.DB, name string, keywordType string) (KeywordGroup, error) {
 	var keywordGroup KeywordGroup
 	var keyWord KeyWord
 
@@ -279,7 +279,7 @@ func (r *EmailStoreRepositoryImpl) getOrCreateKeywordGroup(tx *gorm.DB, name str
 }
 
 // savePositions はポジション関連のデータを保存します
-func (r *EmailStoreRepositoryImpl) savePositions(tx *gorm.DB, result cd.Email, emailId uint) error {
+func (r *Repository) savePositions(tx *gorm.DB, result cd.Email, emailId uint) error {
 	for _, position := range result.Positions {
 		if position == "" {
 			continue
@@ -305,7 +305,7 @@ func (r *EmailStoreRepositoryImpl) savePositions(tx *gorm.DB, result cd.Email, e
 }
 
 // getOrCreatePositionGroup はPositionGroupを取得または作成します
-func (r *EmailStoreRepositoryImpl) getOrCreatePositionGroup(tx *gorm.DB, name string) (PositionGroup, error) {
+func (r *Repository) getOrCreatePositionGroup(tx *gorm.DB, name string) (PositionGroup, error) {
 	var positionGroup PositionGroup
 
 	// 既存のPositionGroupを検索
@@ -357,7 +357,7 @@ func (r *EmailStoreRepositoryImpl) getOrCreatePositionGroup(tx *gorm.DB, name st
 }
 
 // saveWorkTypes は業務種別関連のデータを保存します
-func (r *EmailStoreRepositoryImpl) saveWorkTypes(tx *gorm.DB, result cd.Email, emailId uint) error {
+func (r *Repository) saveWorkTypes(tx *gorm.DB, result cd.Email, emailId uint) error {
 	for _, workType := range result.WorkTypes {
 		if workType == "" {
 			continue
@@ -383,7 +383,7 @@ func (r *EmailStoreRepositoryImpl) saveWorkTypes(tx *gorm.DB, result cd.Email, e
 }
 
 // getOrCreateWorkTypeGroup はWorkTypeGroupを取得または作成します
-func (r *EmailStoreRepositoryImpl) getOrCreateWorkTypeGroup(tx *gorm.DB, name string) (WorkTypeGroup, error) {
+func (r *Repository) getOrCreateWorkTypeGroup(tx *gorm.DB, name string) (WorkTypeGroup, error) {
 	var workTypeGroup WorkTypeGroup
 
 	// 既存のWorkTypeGroupを検索

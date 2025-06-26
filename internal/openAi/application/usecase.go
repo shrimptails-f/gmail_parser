@@ -11,14 +11,14 @@ import (
 	"sync"
 )
 
-// UseCase はメール分析のユースケース実装です
+// UseCase はメール分析のユースケースの具象です
 type UseCase struct {
-	r  r.AnalyzerInterFace
+	r  r.ConnectInterface
 	os oswrapper.OsWapperInterface
 }
 
-// NewEmailAnalysisUseCase はメール分析ユースケースを作成します
-func NewUseCase(r r.AnalyzerInterFace, os oswrapper.OsWapperInterface) *UseCase {
+// New はメール分析ユースケースを作成します
+func New(r r.ConnectInterface, os oswrapper.OsWapperInterface) *UseCase {
 	return &UseCase{
 		r:  r,
 		os: os,

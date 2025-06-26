@@ -6,8 +6,8 @@ import (
 	cd "business/internal/common/domain"
 )
 
-// EmailStoreRepository はメール保存のリポジトリインターフェースです
-type EmailStoreRepository interface {
+// RepositoryInterface はメール保存のリポジトリインターフェースです
+type RepositoryInterface interface {
 	// SaveEmail はメール分析結果をデータベースに保存します
 	SaveEmail(result cd.Email) error
 

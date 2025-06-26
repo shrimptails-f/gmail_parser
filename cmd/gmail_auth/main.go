@@ -131,7 +131,7 @@ func main() {
 
 		fmt.Printf("DBへの保存処理を開始します。")
 		for _, email := range analysisResults {
-			err = container.Invoke(func(ea *ea.EmailStoreUseCaseImpl) {
+			err = container.Invoke(func(ea *ea.UseCase) {
 				err = ea.SaveEmailAnalysisResult(email)
 				if err != nil {
 					fmt.Printf("メール保存エラー: %v \n", err)

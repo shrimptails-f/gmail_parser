@@ -19,14 +19,14 @@ func ProvideGmailDependencies(container *dig.Container) {
 	_ = container.Provide(func(gs *gs.Client, gc *gc.Client, osw *oswrapper.OsWrapper) *gi.GmailConnect {
 		return gi.New(gs, gc, osw)
 	})
-	_ = container.Provide(func(conn *mysql.MySQL) *ei.EmailStoreRepositoryImpl {
-		return ei.NewEmailStoreRepository(conn.DB)
+	_ = container.Provide(func(conn *mysql.MySQL) *ei.Repository {
+		return ei.New(conn.DB)
 	})
 	// app
-	_ = container.Provide(func(ei *ei.EmailStoreRepositoryImpl) *ea.EmailStoreUseCaseImpl {
-		return ea.NewEmailStoreUseCase(ei)
+	_ = container.Provide(func(ei *ei.Repository) *ea.UseCase {
+		return ea.New(ei)
 	})
-	_ = container.Provide(func(gi *gi.GmailConnect, ea *ea.EmailStoreUseCaseImpl) *ga.GmailUseCase {
+	_ = container.Provide(func(gi *gi.GmailConnect, ea *ea.UseCase) *ga.GmailUseCase {
 		return ga.New(gi, ea)
 	})
 }

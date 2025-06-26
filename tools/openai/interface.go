@@ -5,6 +5,6 @@ import (
 	"context"
 )
 
-type ClientInterFace interface {
+type UseCaserInterface interface {
 	Chat(ctx context.Context, prompt string) ([]cd.AnalysisResult, error)
 }

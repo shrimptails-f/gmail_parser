@@ -11,16 +11,16 @@ import (
 
 // AnalyzeEmailController はメール保存のユースケース実装です
 type AnalyzeEmailController struct {
-	ea    ea.EmailStoreUseCase
-	ga    ga.GmailUseCaseInterface
-	aiapp aiapp.EmailAnalysisUseCase
+	ea    ea.UseCaseInterface
+	ga    ga.UseCaseInterface
+	aiapp aiapp.UseCaseInterface
 }
 
 // New はメール保存ユースケースを作成します
 func New(
-	ea ea.EmailStoreUseCase,
-	ga ga.GmailUseCaseInterface,
-	aiapp aiapp.EmailAnalysisUseCase,
+	ea ea.UseCaseInterface,
+	ga ga.UseCaseInterface,
+	aiapp aiapp.UseCaseInterface,
 ) *AnalyzeEmailController {
 	return &AnalyzeEmailController{
 		ea:    ea,

@@ -12,14 +12,14 @@ import (
 	"github.com/samber/lo"
 )
 
-// GmailUseCase はGメール機能群のユースケースです
+// GmailUseCase はGメール機能群の具象です
 type GmailUseCase struct {
-	r  gi.GmailConnectInterface
-	ea ea.EmailStoreUseCase
+	r  gi.ConnectInterface
+	ea ea.UseCaseInterface
 }
 
 // New は新しいメール機能群のユースケースを作成します
-func New(r gi.GmailConnectInterface, ea ea.EmailStoreUseCase) *GmailUseCase {
+func New(r gi.ConnectInterface, ea ea.UseCaseInterface) *GmailUseCase {
 	return &GmailUseCase{
 		r:  r,
 		ea: ea,

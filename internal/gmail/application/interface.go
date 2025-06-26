@@ -6,7 +6,7 @@ import (
 	"context"
 )
 
-// GmailUseCaseInterface はGmailのユースケースインターフェースです
-type GmailUseCaseInterface interface {
+// UseCaseInterface はGmailのユースケースインターフェースです
+type UseCaseInterface interface {
 	GetMessages(ctx context.Context, labelName string, sinceDaysAgo int) ([]cd.BasicMessage, error)
 }
