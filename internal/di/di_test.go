@@ -27,7 +27,6 @@ func TestBuildContainer_NoError(t *testing.T) {
 		_ *mysql.MySQL,
 		_ *openai.Client,
 		_ *gmailService.Client,
-		_ *gmail.Client,
 		_ *oswrapper.OsWrapper,
 	) {
 		// 何もしない

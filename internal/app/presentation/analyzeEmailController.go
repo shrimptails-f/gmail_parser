@@ -16,8 +16,8 @@ type AnalyzeEmailController struct {
 	aiapp aiapp.EmailAnalysisUseCase
 }
 
-// NewAnalyzeEmailController はメール保存ユースケースを作成します
-func NewAnalyzeEmailController(
+// New はメール保存ユースケースを作成します
+func New(
 	ea ea.EmailStoreUseCase,
 	ga ga.GmailUseCaseInterface,
 	aiapp aiapp.EmailAnalysisUseCase,
@@ -30,10 +30,14 @@ func NewAnalyzeEmailController(
 }
 
 func (n *AnalyzeEmailController) SaveEmailAnalysisResult(ctx context.Context) error {
-	messages, err := n.ga.GetMessages(ctx, "営業/案件", 0)
+	messages, err := n.ga.GetMessages(ctx, "営業/案件", -1)
 	if err != nil {
 		fmt.Printf("gメール取得処理失敗: %v \n", err)
 		return err
+	}
+	if len(messages) == 0 {
+		fmt.Printf("gメールの取得結果が0件だったため処理を終了しました。\n")
+		return nil
 	}
 
 	fmt.Printf("メール分析を行います。 \n")

@@ -20,7 +20,7 @@ type Client struct {
 
 // GメールのAPIコールをする前の処理をまとめた構造体です
 // 認可はURLを手動で開く必要があります。
-func NewClient() *Client {
+func New() *Client {
 	return &Client{}
 }
 

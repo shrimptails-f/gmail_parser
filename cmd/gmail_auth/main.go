@@ -37,7 +37,7 @@ func main() {
 	osw := oswrapper.New()
 	ctx := context.Background()
 	credentialsPath := osw.GetEnv("CLIENT_SECRET_PATH")
-	container, err := getDependencies(ctx, osw, credentialsPath)
+	container, err := getDependencies(osw)
 	if err != nil {
 		return
 	}
@@ -146,7 +146,7 @@ func main() {
 	}
 }
 
-func getDependencies(ctx context.Context, osw *oswrapper.OsWrapper, credentialsPath string) (*dig.Container, error) {
+func getDependencies(osw *oswrapper.OsWrapper) (*dig.Container, error) {
 	db, err := mysql.New()
 	if err != nil {
 		fmt.Printf("DB 初期化時にエラーが発生しました。:%v \n,", err)
@@ -155,16 +155,8 @@ func getDependencies(ctx context.Context, osw *oswrapper.OsWrapper, credentialsP
 	apiKey := osw.GetEnv("OPENAI_API_KEY")
 	oa := openai.New(apiKey)
 
-	gs := gmailService.NewClient()
-	tokenPath := "/data/credentials/token_user.json"
-	svc, err := gs.CreateGmailService(ctx, credentialsPath, tokenPath)
-
-	gc := gmail.NewClient(svc)
-
-	if err != nil {
-		fmt.Printf("gメールAPIクライアント生成に失敗しました:%v \n", err)
-		return &dig.Container{}, err
-	}
+	gs := gmailService.New()
+	gc := gmail.New()
 
 	return di.BuildContainer(db, oa, gs, gc, osw), nil
 

@@ -16,7 +16,11 @@ type Client struct {
 	svc *gmail.Service
 }
 
-func NewClient(svc *gmail.Service) *Client {
+func New() *Client {
+	return &Client{}
+}
+
+func (c *Client) SetClient(svc *gmail.Service) *Client {
 	return &Client{
 		svc: svc,
 	}

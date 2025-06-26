@@ -17,6 +17,6 @@ func ProvidePresentationDependencies(container *dig.Container) {
 		ga *ga.GmailUseCase,
 		aiapp *aiapp.UseCase,
 	) *presentation.AnalyzeEmailController {
-		return presentation.NewAnalyzeEmailController(ea, ga, aiapp)
+		return presentation.New(ea, ga, aiapp)
 	})
 }

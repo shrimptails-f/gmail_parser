@@ -36,7 +36,7 @@ func (u *EmailStoreUseCaseImpl) SaveEmailAnalysisResult(result cd.Email) error {
 // GetEmailByGmailIds はメールIDリストを返却します
 func (u *EmailStoreUseCaseImpl) GetEmailByGmailIds(emailIdList []string) ([]string, error) {
 	if len(emailIdList) == 0 {
-		return []string{}, fmt.Errorf("メールIDが空です")
+		return []string{}, nil
 	}
 
 	exists, err := u.r.GetEmailByGmailIds(emailIdList)

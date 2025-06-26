@@ -87,7 +87,6 @@ func TestGetEmailByGmailIds_EmptyList(t *testing.T) {
 	usecase := NewEmailStoreUseCase(mockRepo)
 
 	result, err := usecase.GetEmailByGmailIds([]string{})
-	assert.Error(t, err)
+	assert.Empty(t, err)
 	assert.Empty(t, result)
-	assert.Contains(t, err.Error(), "メールIDが空です")
 }
