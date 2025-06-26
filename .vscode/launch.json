@@ -1,16 +1,18 @@
 {
+  "version": "0.2.0",
   "configurations": [
     {
-      "name": "Attach to dlv exec",
+      "name": "Launch via DAP",
       "type": "go",
-      "request": "attach",
-      "mode": "remote",
-      "host": "localhost",
-      "port": 2345,
-      "apiVersion": 2,
-      "cwd": "${workspaceFolder}",
-      "debugAdapter": "legacy",
-      "trace": "error"
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/cmd/app", 
+      "debugAdapter": "dlv-dap",
+      "trace": "verbose",
+      "showLog": false,
+      "env": {
+        "GIN_MODE": "debug"
+      }
     }
   ]
 }

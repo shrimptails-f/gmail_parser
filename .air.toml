@@ -11,12 +11,10 @@ tmp_dir = "tmp"
 ## コマンドの引数
 #args = ["-w", "."]
 [build]
-# Just plain old shell command. You could use `make` as well.
-cmd = "gosimports -w . && go build -buildvcs=false -o ./tmp/app ./cmd/app"
-# Binary file yields from `cmd`.
-bin = "./tmp/app"
-# Customize binary.
-full_bin = "dlv --listen=:2345 --headless=true --api-version=2 --accept-multiclient exec ./tmp/app"
+args_bin = []
+bin = "/bin/myapp"
+cmd = "go build -gcflags=\"all=-N -l\" -o /bin/myapp ./cmd/app"
+full_bin = "dlv --headless=true --listen=:2345 --api-version=2 --accept-multiclient exec --continue /bin/myapp"
 # Watch these filename extensions.
 include_ext = ["go", "tpl", "tmpl", "html"]
 # Ignore these filename extensions or directories.

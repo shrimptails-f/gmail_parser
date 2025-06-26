@@ -1,4 +1,4 @@
-FROM golang:1.24.0-bookworm
+FROM golang:1.24.2-bookworm
 
 # Task Runner のインストール
 RUN curl -sL "https://github.com/go-task/task/releases/download/v3.9.0/task_linux_amd64.deb" -o task.deb && dpkg -i task.deb && rm task.deb
